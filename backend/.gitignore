@@ -44,3 +44,6 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
+
+# Others
+POSTMAN_TESTING.md
