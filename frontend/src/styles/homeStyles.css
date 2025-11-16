@@ -1,0 +1,230 @@
+
+.home-wrapper {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  overflow: hidden;
+  padding: 32px 16px;
+}
+
+/* декоративні елементи */
+.home-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: 
+    radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 70% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 50%);
+  animation: rotateGradient 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotateGradient {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.home-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  max-width: 800px;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-logo {
+  font-size: 4.5rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #ec4899 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 80px rgba(96, 165, 250, 0.3);
+  letter-spacing: -0.02em;
+  animation: glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    filter: drop-shadow(0 0 20px rgba(96, 165, 250, 0.4));
+  }
+  to {
+    filter: drop-shadow(0 0 40px rgba(167, 139, 250, 0.6));
+  }
+}
+
+.home-subtitle {
+  font-size: 1.25rem;
+  color: #cbd5e1;
+  margin-bottom: 48px;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+}
+
+.home-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* базова кнопка */
+.home-btn {
+  position: relative;
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  display: inline-block;
+}
+
+.home-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  padding: 2px;
+  background: linear-gradient(135deg, transparent, rgba(255,255,255,0.3), transparent);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.home-btn:hover::before {
+  opacity: 1;
+}
+
+/* кнопка "Увійти" */
+.home-btn--login {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  box-shadow: 
+    0 10px 30px rgba(59, 130, 246, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.home-btn--login::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 999px;
+}
+
+.home-btn--login:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 20px 40px rgba(59, 130, 246, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 0 60px rgba(96, 165, 250, 0.4);
+}
+
+.home-btn--login:hover::after {
+  opacity: 1;
+}
+
+.home-btn--login:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* кнопка "Зареєструватися" */
+.home-btn--register {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+  box-shadow: 
+    0 10px 30px rgba(236, 72, 153, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.home-btn--register::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #f472b6, #a78bfa);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 999px;
+}
+
+.home-btn--register:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 20px 40px rgba(236, 72, 153, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 0 60px rgba(244, 114, 182, 0.4);
+}
+
+.home-btn--register:hover::after {
+  opacity: 1;
+}
+
+.home-btn--register:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* текст усередині кнопки */
+.home-btn span {
+  position: relative;
+  z-index: 1;
+}
+
+/* іконки (опціонально) */
+.home-btn-icon {
+  display: inline-block;
+  margin-left: 8px;
+  transition: transform 0.3s ease;
+}
+
+.home-btn:hover .home-btn-icon {
+  transform: translateX(4px);
+}
+
+/*respоnsive */
+@media (max-width: 640px) {
+  .home-logo {
+    font-size: 3rem;
+  }
+  
+  .home-subtitle {
+    font-size: 1rem;
+  }
+  
+  .home-buttons {
+    flex-direction: column;
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .home-btn {
+    width: 100%;
+  }
+}

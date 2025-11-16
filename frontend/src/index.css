@@ -1,3 +1,9 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -5,12 +11,13 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: #020617;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  width: 100%;
 }
 
 a {
@@ -24,15 +31,28 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
   min-height: 100vh;
+  width: 100%;
+  background: radial-gradient(circle at top, #020617 0, #020617 30%, #000 100%);
+  color: inherit;
+  place-content: center;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+.page-main {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #1f1c2c 100%);
+}
+
+.page-main h1 {
+  margin: 0;
+  font-size: 3rem;
+  color: #f9fafb;
+  text-shadow: 0 10px 30px rgba(0,0,0,0.6);
 }
 
 button {

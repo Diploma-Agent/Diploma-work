@@ -1,0 +1,489 @@
+/* === контейнер сторінки === */
+.auth-page-wrapper {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #1f1c2c 100%);
+  overflow: hidden;
+}
+
+.auth-page-wrapper::before,
+.auth-page-wrapper::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  pointer-events: none;
+  animation: float 8s ease-in-out infinite;
+}
+
+.auth-page-wrapper::before {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.6) 0%, transparent 70%);
+  top: -10%;
+  left: -5%;
+  animation-delay: 0s;
+}
+
+.auth-page-wrapper::after {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.5) 0%, transparent 70%);
+  bottom: -10%;
+  right: -5%;
+  animation-delay: 2s;
+  animation-duration: 10s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(30px, -40px) scale(1.1);
+  }
+  50% {
+    transform: translate(-20px, 30px) scale(0.95);
+  }
+  75% {
+    transform: translate(40px, 20px) scale(1.05);
+  }
+}
+
+/* декоративний оверлей */
+.auth-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(255,255,255,0.08) 0, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(0,0,0,0.4) 0, transparent 50%);
+  pointer-events: none;
+}
+
+/* плаваючі частинки */
+.auth-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.auth-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(96, 165, 250, 0.4);
+  animation: particle-float 15s linear infinite;
+}
+
+.auth-particle:nth-child(1) {
+  width: 8px;
+  height: 8px;
+  left: 10%;
+  top: 20%;
+  animation-delay: 0s;
+  animation-duration: 12s;
+}
+
+.auth-particle:nth-child(2) {
+  width: 6px;
+  height: 6px;
+  left: 80%;
+  top: 40%;
+  animation-delay: 3s;
+  animation-duration: 18s;
+}
+
+.auth-particle:nth-child(3) {
+  width: 10px;
+  height: 10px;
+  left: 30%;
+  top: 70%;
+  animation-delay: 6s;
+  animation-duration: 14s;
+}
+
+.auth-particle:nth-child(4) {
+  width: 5px;
+  height: 5px;
+  left: 60%;
+  top: 15%;
+  animation-delay: 2s;
+  animation-duration: 16s;
+}
+
+.auth-particle:nth-child(5) {
+  width: 7px;
+  height: 7px;
+  left: 90%;
+  top: 80%;
+  animation-delay: 4s;
+  animation-duration: 20s;
+}
+
+.auth-particle:nth-child(6) {
+  width: 9px;
+  height: 9px;
+  left: 15%;
+  top: 50%;
+  animation-delay: 1s;
+  animation-duration: 13s;
+  background: rgba(167, 139, 250, 0.4);
+}
+
+@keyframes particle-float {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-100vh) translateX(50px) scale(1.2);
+    opacity: 0.4;
+  }
+  90% {
+    opacity: 0.2;
+  }
+  100% {
+    transform: translateY(-200vh) translateX(-30px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* пульсуючі кільця */
+.auth-rings {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.auth-ring {
+  position: absolute;
+  border: 2px solid rgba(96, 165, 250, 0.2);
+  border-radius: 50%;
+  animation: ring-pulse 6s ease-out infinite;
+}
+
+.auth-ring:nth-child(1) {
+  width: 300px;
+  height: 300px;
+  top: 10%;
+  right: 15%;
+  animation-delay: 0s;
+}
+
+.auth-ring:nth-child(2) {
+  width: 400px;
+  height: 400px;
+  bottom: 5%;
+  left: 10%;
+  animation-delay: 2s;
+  border-color: rgba(167, 139, 250, 0.2);
+}
+
+@keyframes ring-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* обгортка форми */
+.auth-container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 16px;
+}
+
+/* картка форми */
+.auth-form-card {
+  max-width: 440px;
+  width: 100%;
+  padding: 32px;
+  border-radius: 16px;
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  color: #e5e7eb;
+  backdrop-filter: blur(18px);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  will-change: transform, box-shadow;
+}
+
+.auth-form-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 28px 70px rgba(15,23,42,0.95);
+}
+
+/* окрема анімація для реєстрації */
+.auth-form-card--register {
+  animation: authRegisterIn 0.7s cubic-bezier(0.21, 1.02, 0.24, 1) both;
+  transform-origin: 50% 10%;
+}
+
+/* окрема анімація для логіну */
+.auth-form-card--login {
+  animation: authLoginIn 0.7s cubic-bezier(0.21, 1.02, 0.24, 1) both;
+  transform-origin: 50% 0%;
+}
+
+@keyframes authRegisterIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.96);
+    box-shadow: 0 0 0 rgba(0,0,0,0);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.01);
+    box-shadow: 0 26px 60px rgba(0,0,0,0.55);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+}
+
+@keyframes authLoginIn {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+    box-shadow: 0 0 0 rgba(0,0,0,0);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 26px 60px rgba(0,0,0,0.55);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+}
+
+/* заголовок */
+.auth-title {
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* блок помилки */
+.auth-error {
+  color: #fecaca;
+  background-color: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+/* лейбл поля */
+.auth-label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #e5e7eb;
+  position: relative;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  animation: labelFloat 0.3s ease-out;
+}
+
+.auth-label:hover {
+  color: #f9fafb;
+}
+
+.auth-label::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-label:focus-within::after {
+  width: 100%;
+}
+
+.auth-label:focus-within {
+  color: #60a5fa;
+  transform: translateX(2px);
+}
+
+/* поле вводу */
+.auth-input {
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 4px;
+  border-radius: 8px;
+  border: 1px solid #4b5563;
+  outline: none;
+  background-color: rgba(17, 24, 39, 0.85);
+  color: #f9fafb;
+  font-size: 14px;
+  transition: 
+    border-color 0.3s ease, 
+    box-shadow 0.3s ease, 
+    background-color 0.3s ease,
+    transform 0.2s ease;
+  box-shadow: 0 0 0 0 rgba(59,130,246,0);
+  position: relative;
+}
+
+.auth-input:hover {
+  border-color: #60a5fa;
+  background-color: rgba(15, 23, 42, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.auth-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 
+    0 0 0 3px rgba(59, 130, 246, 0.25),
+    0 8px 16px rgba(59, 130, 246, 0.2);
+  background-color: rgba(15, 23, 42, 0.95);
+  transform: translateY(-2px);
+}
+
+.auth-input:not(:placeholder-shown) {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.3);
+}
+
+.auth-input::placeholder {
+  color: #6b7280;
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.auth-input:hover::placeholder {
+  color: #9ca3af;
+}
+
+.auth-input:focus::placeholder {
+  opacity: 0.5;
+  color: #60a5fa;
+}
+
+@keyframes labelFloat {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* кнопка submit */
+.auth-button {
+  position: relative;
+  width: 100%;
+  padding: 12px 14px;
+  margin-top: 10px;
+  background-image: linear-gradient(135deg, #22c1c3, #2563eb, #7c3aed);
+  background-size: 200% 200%;
+  background-position: 0 0;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow:
+    0 12px 30px rgba(37,99,235,0.5),
+    0 0 0 1px rgba(148,163,184,0.3),
+    0 0 18px rgba(59,130,246,0.6);
+  transform: translateY(0);
+  transition:
+    background-position 0.35s ease,
+    box-shadow 0.25s ease,
+    transform 0.12s ease,
+    opacity 0.2s ease;
+  overflow: hidden;
+}
+
+.auth-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 0 0, rgba(255,255,255,0.35), transparent 55%);
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  transform: translate3d(-20%, -40%, 0);
+  pointer-events: none;
+}
+
+.auth-button:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow:
+    0 18px 38px rgba(37,99,235,0.7),
+    0 0 0 1px rgba(191,219,254,0.5),
+    0 0 26px rgba(96,165,250,0.9);
+  background-position: 100% 0;
+}
+
+.auth-button:hover:not(:disabled)::after {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.auth-button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+  box-shadow:
+    0 10px 18px rgba(15,23,42,0.9),
+    0 0 0 1px rgba(30,64,175,0.7);
+}
+
+.auth-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* текст внизу (вже є акаунт / немає акаунту) */
+.auth-bottom-text {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.auth-bottom-text a {
+  color: #60a5fa;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.auth-bottom-text a:hover {
+  color: #93c5fd;
+}
