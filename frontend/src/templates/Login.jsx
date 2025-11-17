@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/authStyles.css';
-import { mockAuth } from '../utils/mockAuth';
+import { authService } from '../api/authService';
 
 function Login() {
 	const [form, setForm] = useState({ email: '', password: '' });
@@ -23,22 +23,15 @@ function Login() {
 		try {
 			setLoading(true);
 			
-			// Використовуємо mock auth замість API
-			const data = await mockAuth.login({
+			// Використовуємо реальний API
+			const data = await authService.login({
 				email: form.email,
 				password: form.password,
 			});
 			
 			if (data.token) {
-				localStorage.setItem('token', data.token);
-				
-				// Перевіряємо чи профіль налаштовано
-				const profileCompleted = localStorage.getItem('profileCompleted');
-				if (profileCompleted === 'true') {
-					navigate('/profile');
-				} else {
-					navigate('/create-profile');
-				}
+				// Токен вже збережено в authService.login
+				navigate('/dashboard');
 			} else {
 				throw new Error('Токен не отримано');
 			}

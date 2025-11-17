@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/authStyles.css';
-import { mockAuth } from '../utils/mockAuth';
+import { authService } from '../api/authService';
 
 function Register() {
 	const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
@@ -27,21 +27,21 @@ function Register() {
 		try {
 			setLoading(true);
 			
-			await mockAuth.register({
+			await authService.register({
 				name: form.name,
 				email: form.email,
 				password: form.password,
 			});
 			
 			// Після реєстрації автоматично логінимо користувача
-			const loginData = await mockAuth.login({
+			const loginData = await authService.login({
 				email: form.email,
 				password: form.password,
 			});
 			
 			if (loginData.token) {
-				localStorage.setItem('token', loginData.token);
-				navigate('/create-profile');
+				// Токен вже збережено в authService.login
+				navigate('/dashboard');
 			}
 		} catch (err) {
 			setError(err.message || 'Сталася помилка.');
