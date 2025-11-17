@@ -101,10 +101,22 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        username = serializer.validated_data['username']
+        username_or_email = serializer.validated_data['username']
         password = serializer.validated_data['password']
         
-        user = authenticate(username=username, password=password)
+        # Спробувати знайти користувача за email або username
+        user = None
+        
+        # Якщо введено email
+        if '@' in username_or_email:
+            try:
+                user_obj = User.objects.get(email=username_or_email)
+                user = authenticate(username=user_obj.username, password=password)
+            except User.DoesNotExist:
+                pass
+        else:
+            # Якщо введено username
+            user = authenticate(username=username_or_email, password=password)
         
         if user is None:
             return Response({
