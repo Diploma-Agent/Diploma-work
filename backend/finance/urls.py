@@ -3,7 +3,8 @@ from .views import (
     BankConnectionListView, AddBankConnectionView, DeleteBankConnectionView,
     CryptoExchangeListView, AddCryptoExchangeView, DeleteCryptoExchangeView,
     TransactionListView, SyncView, SyncLogListView, TransactionCategoryListView,
-    PUMBAuthInitView, PUMBAuthCallbackView
+    PUMBAuthInitView, PUMBAuthCallbackView,
+    ExchangeBalanceView, ExchangeOrdersView
 )
 
 app_name = 'finance'
@@ -22,6 +23,10 @@ urlpatterns = [
     path('exchanges/', CryptoExchangeListView.as_view(), name='exchange_list'),
     path('exchanges/add/', AddCryptoExchangeView.as_view(), name='exchange_add'),
     path('exchanges/<int:pk>/delete/', DeleteCryptoExchangeView.as_view(), name='exchange_delete'),
+    
+    # Exchange info
+    path('exchanges/balance/', ExchangeBalanceView.as_view(), name='exchange_balance'),
+    path('exchanges/orders/', ExchangeOrdersView.as_view(), name='exchange_orders'),
     
     # Transactions
     path('transactions/', TransactionListView.as_view(), name='transaction_list'),

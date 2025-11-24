@@ -419,3 +419,89 @@ class PUMBAuthCallbackView(views.APIView):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class ExchangeBalanceView(views.APIView):
+    """Отримати баланс біржі"""
+    permission_classes = (IsAuthenticated,)
+    
+    @swagger_auto_schema(
+        responses={
+            200: "Баланс отримано",
+            404: "Підключення не знайдено"
+        }
+    )
+    def get(self, request):
+        exchange_name = request.query_params.get('exchange', 'bybit')
+        
+        try:
+            exchange = CryptoExchange.objects.get(
+                user=request.user,
+                exchange_name=exchange_name,
+                status='active'
+            )
+            
+            if exchange_name == 'bybit':
+                service = BybitService(exchange.api_key, exchange.api_secret)
+                balance = service.get_wallet_balance()
+                return Response(balance)
+            
+            # Тут можна додати інші біржі
+            
+            return Response({'error': 'Біржа не підтримується'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        except CryptoExchange.DoesNotExist:
+            return Response(
+                {'error': 'Підключення не знайдено'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ExchangeOrdersView(views.APIView):
+    """Отримати відкриті ордери"""
+    permission_classes = (IsAuthenticated,)
+    
+    @swagger_auto_schema(
+        responses={
+            200: "Ордери отримано",
+            404: "Підключення не знайдено"
+        }
+    )
+    def get(self, request):
+        exchange_name = request.query_params.get('exchange', 'bybit')
+        category = request.query_params.get('category', 'spot')
+        symbol = request.query_params.get('symbol')
+        settle_coin = request.query_params.get('settleCoin')
+        
+        try:
+            exchange = CryptoExchange.objects.get(
+                user=request.user,
+                exchange_name=exchange_name,
+                status='active'
+            )
+            
+            if exchange_name == 'bybit':
+                service = BybitService(exchange.api_key, exchange.api_secret)
+                
+                # Для linear категорії потрібен settleCoin або symbol
+                if category == 'linear' and not symbol and not settle_coin:
+                    settle_coin = 'USDT'
+                
+                orders = service.get_open_orders(
+                    category=category,
+                    symbol=symbol,
+                    settleCoin=settle_coin
+                )
+                return Response(orders)
+            
+            return Response({'error': 'Біржа не підтримується'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        except CryptoExchange.DoesNotExist:
+            return Response(
+                {'error': 'Підключення не знайдено'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

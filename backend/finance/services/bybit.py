@@ -89,6 +89,19 @@ class BybitService:
         }
         return self._make_request('GET', '/v5/execution/list', params)
     
+    def get_open_orders(self, category='spot', symbol=None, settleCoin=None, limit=50):
+        """Get open orders"""
+        params = {
+            'category': category,
+            'limit': limit
+        }
+        if symbol:
+            params['symbol'] = symbol
+        if settleCoin:
+            params['settleCoin'] = settleCoin
+            
+        return self._make_request('GET', '/v5/order/realtime', params)
+    
     def sync_transactions(self, crypto_exchange, days=30):
         """Synchronize trades from Bybit to database"""
         sync_log = SyncLog.objects.create(
