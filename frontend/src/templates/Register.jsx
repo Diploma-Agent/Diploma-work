@@ -7,9 +7,42 @@ function Register() {
 	const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
 	const [error, setError] = useState('');
 	const [loading, setLoading] = useState(false);
+	const [touched, setTouched] = useState({ password: false });
 	const navigate = useNavigate();
 
-	const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+	const validatePassword = (password) => {
+		const errors = [];
+		if (password.length < 8) {
+			errors.push("Мінімум 8 символів");
+		}
+		if (!/\d/.test(password)) {
+			errors.push("Має містити хоча б одну цифру");
+		}
+		if (!/[a-zA-Z]/.test(password)) {
+			errors.push("Має містити хоча б одну літеру");
+			}
+			
+			// Перевірка на прості паролі
+			const commonPasswords = ['password', 'qwerty', '12345678', 'admin', 'letmein', 'welcome'];
+			const lowerPassword = password.toLowerCase();
+			if (commonPasswords.some(common => lowerPassword.includes(common))) {
+				errors.push("Пароль занадто простий");
+			}
+			
+			return errors;
+		};
+
+	const passwordErrors = touched.password ? validatePassword(form.password) : [];
+	const isPasswordValid = form.password && passwordErrors.length === 0;
+
+	const onChange = (e) => {
+		setForm({ ...form, [e.target.name]: e.target.value });
+		setError('');
+	};
+
+	const onBlur = (e) => {
+		setTouched({ ...touched, [e.target.name]: true });
+	};
 
 	const onSubmit = async (e) => {
 		e.preventDefault();
@@ -19,6 +52,15 @@ function Register() {
 			setError('Заповніть всі поля.');
 			return;
 		}
+		
+		// Перевірка валідності пароля
+		const validationErrors = validatePassword(form.password);
+		if (validationErrors.length > 0) {
+			setError('Пароль не відповідає вимогам.');
+			setTouched({ ...touched, password: true });
+			return;
+		}
+
 		if (form.password !== form.confirm) {
 			setError('Паролі не співпадають.');
 			return;
@@ -33,14 +75,12 @@ function Register() {
 				password: form.password,
 			});
 			
-			// Після реєстрації автоматично логінимо користувача
 			const loginData = await authService.login({
 				email: form.email,
 				password: form.password,
 			});
 			
 			if (loginData.token) {
-				// Токен вже збережено в authService.login
 				navigate('/dashboard');
 			}
 		} catch (err) {
@@ -104,15 +144,32 @@ function Register() {
 						<label className="auth-label">
 							Пароль
 							<input
-								className="auth-input"
+								className={`auth-input ${touched.password && passwordErrors.length > 0 ? 'auth-input--error' : ''} ${isPasswordValid ? 'auth-input--success' : ''}`}
 								name="password"
 								type="password"
 								placeholder="Пароль"
 								value={form.password}
 								onChange={onChange}
+								onBlur={onBlur}
 								required
-								minLength={6}
 							/>
+							<small className="auth-hint">
+								Вимоги: мінімум 8 символів, літери та цифри
+							</small>
+							
+							{touched.password && passwordErrors.length > 0 && (
+								<ul className="auth-validation-errors">
+									{passwordErrors.map((err, index) => (
+										<li key={index}>✗ {err}</li>
+									))}
+								</ul>
+							)}
+							
+							{isPasswordValid && (
+								<div className="auth-validation-success">
+									✓ Пароль відповідає вимогам
+								</div>
+							)}
 						</label>
 
 						<label className="auth-label">
@@ -125,7 +182,6 @@ function Register() {
 								value={form.confirm}
 								onChange={onChange}
 								required
-								minLength={6}
 							/>
 						</label>
 

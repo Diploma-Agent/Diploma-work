@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/profileStyles.css';
-import { mockAuth } from '../utils/mockAuth';
+import { authService } from '../api/authService';
 import Navbar from '../components/Navbar';
+import { financeService } from '../api/financeService';
 
 function Profile() {
 	const [user, setUser] = useState(null);
@@ -48,10 +49,10 @@ function Profile() {
 				return;
 			}
 
-			const data = await mockAuth.getMe(token);
+			const data = await authService.getMe(token);
 			setUser(data);
 			setForm({ 
-				name: data.name, 
+				name: data.first_name || data.username, 
 				email: data.email,
 				phone: data.phone || '',
 				bio: data.bio || '',
@@ -61,20 +62,37 @@ function Profile() {
 				linkedin: data.linkedin || ''
 			});
 		} catch (err) {
+			console.error('Помилка завантаження профілю:', err);
 			setError(err.message);
-			localStorage.removeItem('token');
-			navigate('/login');
+			
+			// Не видаляємо токен одразу, показуємо помилку
+			// Якщо помилка про сесію - тоді перенаправляємо
+			if (err.message.includes('Сесія закінчилась')) {
+				localStorage.removeItem('token');
+				localStorage.removeItem('refreshToken');
+				setTimeout(() => navigate('/login'), 2000);
+			}
 		}
 	};
 
-	const loadBanks = () => {
-		const savedBanks = JSON.parse(localStorage.getItem('userBanks') || '[]');
-		setBanks(savedBanks);
+	const loadBanks = async () => {
+		try {
+			const token = localStorage.getItem('token');
+			const data = await financeService.getBanks(token);
+			setBanks(data);
+		} catch (err) {
+			console.error('Помилка завантаження банків:', err);
+		}
 	};
 
-	const loadTokens = () => {
-		const savedTokens = JSON.parse(localStorage.getItem('userTokens') || '[]');
-		setTokens(savedTokens);
+	const loadTokens = async () => {
+		try {
+			const token = localStorage.getItem('token');
+			const data = await financeService.getExchanges(token);
+			setTokens(data);
+		} catch (err) {
+			console.error('Помилка завантаження бірж:', err);
+		}
 	};
 
 	const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -96,7 +114,7 @@ function Profile() {
 		try {
 			setLoading(true);
 			const token = localStorage.getItem('token');
-			const data = await mockAuth.updateProfile(token, form);
+			const data = await authService.updateProfile(token, form);
 			
 			setUser(data);
 			setSuccess('Профіль успішно оновлено!');
@@ -108,68 +126,70 @@ function Profile() {
 		}
 	};
 
-	const handleAddBank = (e) => {
+	const handleAddBank = async (e) => {
 		e.preventDefault();
 		if (!bankForm.name || !bankForm.apiKey) {
 			setError('Заповніть всі поля банку.');
 			return;
 		}
 
-		const newBank = {
-			id: Date.now().toString(),
-			...bankForm,
-			addedAt: new Date().toISOString(),
-			status: 'active'
-		};
-
-		const updatedBanks = [...banks, newBank];
-		setBanks(updatedBanks);
-		localStorage.setItem('userBanks', JSON.stringify(updatedBanks));
-		
-		setBankForm({ name: '', type: 'monobank', apiKey: '' });
-		setShowAddBank(false);
-		setSuccess('Банк успішно додано!');
-		setTimeout(() => setSuccess(''), 3000);
+		try {
+			const token = localStorage.getItem('token');
+			await financeService.addBank(token, bankForm);
+			
+			setBankForm({ name: '', type: 'monobank', apiKey: '' });
+			setShowAddBank(false);
+			setSuccess('Банк успішно додано!');
+			loadBanks();
+			setTimeout(() => setSuccess(''), 3000);
+		} catch (err) {
+			setError(err.message);
+		}
 	};
 
-	const handleRemoveBank = (id) => {
-		const updatedBanks = banks.filter(b => b.id !== id);
-		setBanks(updatedBanks);
-		localStorage.setItem('userBanks', JSON.stringify(updatedBanks));
-		setSuccess('Банк видалено!');
-		setTimeout(() => setSuccess(''), 3000);
+	const handleRemoveBank = async (id) => {
+		try {
+			const token = localStorage.getItem('token');
+			await financeService.deleteBank(token, id);
+			setSuccess('Банк видалено!');
+			loadBanks();
+			setTimeout(() => setSuccess(''), 3000);
+		} catch (err) {
+			setError(err.message);
+		}
 	};
 
-	const handleAddToken = (e) => {
+	const handleAddToken = async (e) => {
 		e.preventDefault();
 		if (!tokenForm.name || !tokenForm.apiKey || !tokenForm.apiSecret) {
 			setError('Заповніть всі поля токена.');
 			return;
 		}
 
-		const newToken = {
-			id: Date.now().toString(),
-			...tokenForm,
-			createdAt: new Date().toISOString(),
-			status: 'active'
-		};
-
-		const updatedTokens = [...tokens, newToken];
-		setTokens(updatedTokens);
-		localStorage.setItem('userTokens', JSON.stringify(updatedTokens));
-		
-		setTokenForm({ exchange: 'binance', apiKey: '', apiSecret: '', name: '' });
-		setShowAddToken(false);
-		setSuccess('Токен біржі успішно додано!');
-		setTimeout(() => setSuccess(''), 3000);
+		try {
+			const token = localStorage.getItem('token');
+			await financeService.addExchange(token, tokenForm);
+			
+			setTokenForm({ exchange: 'binance', apiKey: '', apiSecret: '', name: '' });
+			setShowAddToken(false);
+			setSuccess('Токен біржі успішно додано!');
+			loadTokens();
+			setTimeout(() => setSuccess(''), 3000);
+		} catch (err) {
+			setError(err.message);
+		}
 	};
 
-	const handleRemoveToken = (id) => {
-		const updatedTokens = tokens.filter(t => t.id !== id);
-		setTokens(updatedTokens);
-		localStorage.setItem('userTokens', JSON.stringify(updatedTokens));
-		setSuccess('Токен видалено!');
-		setTimeout(() => setSuccess(''), 3000);
+	const handleRemoveToken = async (id) => {
+		try {
+			const token = localStorage.getItem('token');
+			await financeService.deleteExchange(token, id);
+			setSuccess('Токен видалено!');
+			loadTokens();
+			setTimeout(() => setSuccess(''), 3000);
+		} catch (err) {
+			setError(err.message);
+		}
 	};
 
 	const handleLogout = () => {
@@ -191,7 +211,7 @@ function Profile() {
 
 				setLoading(true);
 				const token = localStorage.getItem('token');
-				await mockAuth.updateProfile(token, form);
+				await authService.updateProfile(token, form);
 			}
 
 			// Позначаємо, що налаштування завершено
@@ -224,9 +244,9 @@ function Profile() {
 		<>
 			<div className="profile-header">
 				<div className="profile-avatar">
-					{user.name.charAt(0).toUpperCase()}
+					{user.first_name?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase() || 'U'}
 				</div>
-				<h2 className="profile-name">{user.name}</h2>
+				<h2 className="profile-name">{user.first_name || user.username}</h2>
 				<p className="profile-email">{user.email}</p>
 			</div>
 
@@ -548,13 +568,13 @@ function Profile() {
 						banks.map(bank => (
 							<div key={bank.id} className="item-card">
 								<div className="item-icon">
-									{getBankIcon(bank.type)}
+									{getBankIcon(bank.bank_type)}
 								</div>
 								<div className="item-info">
 									<h4 className="item-name">{bank.name}</h4>
-									<p className="item-detail">{bank.type.toUpperCase()}</p>
+									<p className="item-detail">{bank.bank_type?.toUpperCase()}</p>
 									<p className="item-date">
-										Додано: {new Date(bank.addedAt).toLocaleDateString('uk-UA')}
+										Додано: {new Date(bank.created_at).toLocaleDateString('uk-UA')}
 									</p>
 									<span className={`item-status ${bank.status}`}>
 										{bank.status === 'active' ? '● Активний' : '○ Неактивний'}
@@ -696,12 +716,12 @@ function Profile() {
 								</div>
 								<div className="item-info">
 									<h4 className="item-name">{token.name}</h4>
-									<p className="item-detail">{token.exchange.toUpperCase()}</p>
+									<p className="item-detail">{token.exchange?.toUpperCase()}</p>
 									<p className="item-detail token-value">
-										API Key: {token.apiKey.substring(0, 8)}...{token.apiKey.substring(token.apiKey.length - 4)}
+										API Key: {token.api_key_masked || 'Захищено'}
 									</p>
 									<p className="item-date">
-										Додано: {new Date(token.createdAt).toLocaleDateString('uk-UA')}
+										Додано: {new Date(token.created_at).toLocaleDateString('uk-UA')}
 									</p>
 									<span className={`item-status ${token.status}`}>
 										{token.status === 'active' ? '● Активний' : '○ Неактивний'}
