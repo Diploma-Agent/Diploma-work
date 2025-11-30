@@ -30,7 +30,7 @@ export const authService = {
 		try {
 			// Backend підтримує як username, так і email
 			const response = await api.post('/api/auth/login/', {
-				username: credentials.email, // Можна відправляти email або username
+				username: credentials.login || credentials.email, // Можна відправляти email або username
 				password: credentials.password,
 			});
 			

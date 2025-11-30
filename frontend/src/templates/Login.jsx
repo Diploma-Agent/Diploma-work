@@ -4,7 +4,7 @@ import '../styles/authStyles.css';
 import { authService } from '../api/authService';
 
 function Login() {
-	const [form, setForm] = useState({ email: '', password: '' });
+	const [form, setForm] = useState({ login: '', password: '' });
 	const [error, setError] = useState('');
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
@@ -15,7 +15,7 @@ function Login() {
 		e.preventDefault();
 		setError('');
 
-		if (!form.email || !form.password) {
+		if (!form.login || !form.password) {
 			setError('Заповніть всі поля.');
 			return;
 		}
@@ -25,7 +25,7 @@ function Login() {
 			
 			// Використовуємо реальний API
 			const data = await authService.login({
-				email: form.email,
+				login: form.login,
 				password: form.password,
 			});
 			
@@ -68,13 +68,13 @@ function Login() {
 					{error && <div className="auth-error">{error}</div>}
 					<form onSubmit={onSubmit} noValidate>
 						<label className="auth-label">
-							Email
+							Email або ім'я користувача
 							<input
 								className="auth-input"
-								name="email"
-								type="email"
-								placeholder="you@example.com"
-								value={form.email}
+								name="login"
+								type="text"
+								placeholder="Email або username"
+								value={form.login}
 								onChange={onChange}
 								required
 							/>
