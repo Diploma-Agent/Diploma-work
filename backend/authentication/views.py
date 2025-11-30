@@ -7,6 +7,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.decorators import api_view, permission_classes
 
 from .serializers import (
     RegisterSerializer,
@@ -14,6 +15,47 @@ from .serializers import (
     UserSerializer,
     ChangePasswordSerializer
 )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register(request):
+    serializer = RegisterSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        
+        # Генеруємо JWT токени
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'message': 'Користувача успішно створено',
+            'email': user.email,
+            'access': str(refresh.access_token),
+            'refresh': str(refresh)
+        }, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login(request):
+    serializer = LoginSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.validated_data['user']
+        
+        # Генеруємо JWT токени
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'username': user.username
+            }
+        })
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -101,27 +143,8 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        username_or_email = serializer.validated_data['username']
-        password = serializer.validated_data['password']
-        
-        # Спробувати знайти користувача за email або username
-        user = None
-        
-        # Якщо введено email
-        if '@' in username_or_email:
-            try:
-                user_obj = User.objects.get(email=username_or_email)
-                user = authenticate(username=user_obj.username, password=password)
-            except User.DoesNotExist:
-                pass
-        else:
-            # Якщо введено username
-            user = authenticate(username=username_or_email, password=password)
-        
-        if user is None:
-            return Response({
-                'error': 'Неправильні дані для входу'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+        # Отримуємо користувача напряму з validated_data
+        user = serializer.validated_data['user']
         
         if not user.is_active:
             return Response({

@@ -109,10 +109,14 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
     },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
+    # Закоментуйте цей валідатор, щоб дозволити прості паролі
+    # {
+    #     'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    # },
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
@@ -149,6 +153,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    # Додаємо наш обробник помилок
+    'EXCEPTION_HANDLER': 'config.utils.custom_exception_handler',
 }
 
 # JWT Settings
@@ -188,3 +194,21 @@ CELERY_ENABLE_UTC = True
 PUMB_CLIENT_ID = config('PUMB_CLIENT_ID', default='')
 PUMB_CLIENT_SECRET = config('PUMB_CLIENT_SECRET', default='')
 PUMB_REDIRECT_URI = config('PUMB_REDIRECT_URI', default='http://localhost:8000/api/finance/pumb/callback')
+
+# Додаємо налаштування логування для виводу помилок у консоль
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',  # Показуватиме деталі запитів
+            'propagate': True,
+        },
+    },
+}

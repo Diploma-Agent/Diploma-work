@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
+from django.contrib.auth import authenticate
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -19,7 +20,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'password', 'password2', 'email', 'first_name', 'last_name')
+        fields = ('email', 'password', 'password2', 'first_name', 'last_name')
         extra_kwargs = {
             'first_name': {'required': False},
             'last_name': {'required': False}
@@ -32,14 +33,42 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password2')
-        user = User.objects.create_user(**validated_data)
+        user = User.objects.create_user(
+            username=validated_data['email'],  # використовуємо email як username
+            email=validated_data['email'],
+            password=validated_data['password'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', '')
+        )
         return user
 
 
 class LoginSerializer(serializers.Serializer):
     """Serializer for user login"""
-    username = serializers.CharField(required=True)
+    email = serializers.EmailField()
     password = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, data):
+        email = data.get('email')
+        password = data.get('password')
+
+        if email and password:
+            # Шукаємо користувача за email
+            try:
+                user = User.objects.get(email=email)
+                # Перевіряємо пароль
+                user = authenticate(username=user.username, password=password)
+            except User.DoesNotExist:
+                user = None
+
+            if not user:
+                raise serializers.ValidationError('Невірний email або пароль')
+
+            data['user'] = user
+        else:
+            raise serializers.ValidationError('Email і пароль обов\'язкові')
+
+        return data
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -47,7 +76,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'date_joined')
-        read_only_fields = ('id', 'date_joined')
+        read_only_fields = ('id', 'username', 'date_joined')
 
 
 class ChangePasswordSerializer(serializers.Serializer):

@@ -1,30 +1,28 @@
-import api from './axios';
+const API_URL = 'http://localhost:8000/api/auth';
 
-// Auth Service для роботи з Django backend
 export const authService = {
-	// Реєстрація користувача
-	register: async (userData) => {
-		try {
-			// Backend очікує username, password, password2, email
-			const response = await api.post('/api/auth/register/', {
-				username: userData.email.split('@')[0], // Використовуємо частину email як username
-				email: userData.email,
-				password: userData.password,
-				password2: userData.password,
-				first_name: userData.name || '',
-			});
-			return response.data;
-		} catch (error) {
-			throw new Error(
-				error.response?.data?.error || 
-				error.response?.data?.message || 
-				error.response?.data?.username?.[0] ||
-				error.response?.data?.email?.[0] ||
-				'Помилка реєстрації'
-			);
+	async register(data) {
+		const response = await fetch(`${API_URL}/register/`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				email: data.email,
+				password: data.password,
+				username: data.email  // використовуємо email як username
+			}),
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.message || 'Помилка реєстрації');
 		}
+
+		return response.json();
 	},
 
+<<<<<<< HEAD
 	// Вхід користувача
 	login: async (credentials) => {
 		try {
@@ -39,51 +37,105 @@ export const authService = {
 				localStorage.setItem('token', response.data.access);
 				if (response.data.refresh) {
 					localStorage.setItem('refreshToken', response.data.refresh);
+=======
+	async login(data) {
+		const response = await fetch(`${API_URL}/login/`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				email: data.email,
+				password: data.password
+			}),
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.email || error.password || 'Невірний email або пароль');
+		}
+
+		const result = await response.json();
+		
+		// Зберігаємо access і refresh токени
+		if (result.access) {
+			localStorage.setItem('token', result.access);
+			localStorage.setItem('refreshToken', result.refresh);
+		}
+
+		return { token: result.access, ...result };
+	},
+
+	async getMe(token) {
+		const response = await fetch(`${API_URL}/profile/`, {
+			method: 'GET',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json',
+			},
+		});
+
+		if (!response.ok) {
+			// Якщо токен невалідний, спробуємо оновити його
+			if (response.status === 401) {
+				const refreshToken = localStorage.getItem('refreshToken');
+				if (refreshToken) {
+					try {
+						const newToken = await this.refreshToken(refreshToken);
+						// Повторюємо запит з новим токеном
+						return this.getMe(newToken);
+					} catch (err) {
+						throw new Error('Сесія закінчилась. Увійдіть знову.');
+					}
+>>>>>>> 78d8282a91de0e2d3e71f9a3f097b2ced98d3848
 				}
 			}
-			
-			return {
-				token: response.data.access,
-				user: response.data.user,
-			};
-		} catch (error) {
-			throw new Error(
-				error.response?.data?.error || 
-				error.response?.data?.message || 
-				'Невірний email або пароль'
-			);
+			throw new Error('Помилка отримання даних користувача');
 		}
+
+		return response.json();
 	},
 
-	// Отримання даних поточного користувача
-	getMe: async () => {
-		try {
-			const response = await api.get('/api/auth/profile/');
-			return response.data;
-		} catch (error) {
-			throw new Error(
-				error.response?.data?.error || 
-				'Помилка отримання даних користувача'
-			);
+	async refreshToken(refreshToken) {
+		const response = await fetch(`${API_URL}/token/refresh/`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ refresh: refreshToken }),
+		});
+
+		if (!response.ok) {
+			throw new Error('Не вдалось оновити токен');
 		}
+
+		const result = await response.json();
+		
+		if (result.access) {
+			localStorage.setItem('token', result.access);
+		}
+
+		return result.access;
 	},
 
-	// Оновлення профілю
-	updateProfile: async (profileData) => {
-		try {
-			const response = await api.put('/api/auth/profile/', profileData);
-			return response.data;
-		} catch (error) {
-			throw new Error(
-				error.response?.data?.error || 
-				'Помилка оновлення профілю'
-			);
-		}
-	},
+	async updateProfile(token, data) {
+		const response = await fetch(`${API_URL}/profile/`, {
+			method: 'PATCH',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				first_name: data.name,
+				email: data.email
+			}),
+		});
 
-	// Вихід (очищення токенів)
-	logout: () => {
-		localStorage.removeItem('token');
-		localStorage.removeItem('refreshToken');
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.message || 'Помилка оновлення профілю');
+		}
+
+		return response.json();
 	},
 };
