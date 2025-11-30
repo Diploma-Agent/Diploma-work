@@ -58,7 +58,7 @@ export const financeService = {
 	},
 
 	async addExchange(token, data) {
-		const response = await fetch(`${API_URL}/exchanges/`, {
+		const response = await fetch(`${API_URL}/exchanges/add/`, {
 			method: 'POST',
 			headers: {
 				'Authorization': `Bearer ${token}`,
@@ -66,7 +66,7 @@ export const financeService = {
 			},
 			body: JSON.stringify({
 				name: data.name,
-				exchange: data.exchange,
+				exchange_name: data.exchange,
 				api_key: data.apiKey,
 				api_secret: data.apiSecret,
 			}),
@@ -80,7 +80,7 @@ export const financeService = {
 	},
 
 	async deleteExchange(token, id) {
-		const response = await fetch(`${API_URL}/exchanges/${id}/`, {
+		const response = await fetch(`${API_URL}/exchanges/${id}/delete/`, {
 			method: 'DELETE',
 			headers: {
 				'Authorization': `Bearer ${token}`,
@@ -88,5 +88,33 @@ export const financeService = {
 		});
 
 		if (!response.ok) throw new Error('Помилка видалення біржі');
+	},
+
+	async getExchangeBalance(token, exchange = 'bybit') {
+		const response = await fetch(`${API_URL}/exchanges/balance/?exchange=${exchange}`, {
+			headers: {
+				'Authorization': `Bearer ${token}`,
+			},
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || 'Помилка отримання балансу');
+		}
+		return response.json();
+	},
+
+	async getExchangeOrders(token, exchange = 'bybit', category = 'spot') {
+		const response = await fetch(`${API_URL}/exchanges/orders/?exchange=${exchange}&category=${category}`, {
+			headers: {
+				'Authorization': `Bearer ${token}`,
+			},
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || 'Помилка отримання ордерів');
+		}
+		return response.json();
 	},
 };
