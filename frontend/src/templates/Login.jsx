@@ -25,7 +25,7 @@ function Login() {
 			
 			// Використовуємо реальний API
 			const data = await authService.login({
-				login: form.login,
+				email: form.login,
 				password: form.password,
 			});
 			
@@ -43,7 +43,7 @@ function Login() {
 	};
 
 	return (
-		<div className="auth-page-wrapper">
+        <div className="auth-page-wrapper">
 			<div className="auth-overlay" />
 			
 			{/* Анімовані частинки */}
@@ -70,14 +70,13 @@ function Login() {
 						<label className="auth-label">
 							Email або ім'я користувача
 							<input
-								className="auth-input"
-								name="login"
-								type="text"
-								placeholder="Email або username"
-								value={form.login}
-								onChange={onChange}
-								required
-							/>
+                                className="auth-input"
+                                name="login"
+                                type="text"
+                                placeholder="Email або username"
+                                value={form.login}
+                                onChange={onChange}
+                                required></input>
 						</label>
 
 						<label className="auth-label">
@@ -104,7 +103,7 @@ function Login() {
 				</div>
 			</div>
 		</div>
-	);
+    );
 }
 
 export default Login;

@@ -22,22 +22,6 @@ export const authService = {
 		return response.json();
 	},
 
-<<<<<<< HEAD
-	// Вхід користувача
-	login: async (credentials) => {
-		try {
-			// Backend підтримує як username, так і email
-			const response = await api.post('/api/auth/login/', {
-				username: credentials.login || credentials.email, // Можна відправляти email або username
-				password: credentials.password,
-			});
-			
-			// Зберігаємо токен
-			if (response.data.access) {
-				localStorage.setItem('token', response.data.access);
-				if (response.data.refresh) {
-					localStorage.setItem('refreshToken', response.data.refresh);
-=======
 	async login(data) {
 		const response = await fetch(`${API_URL}/login/`, {
 			method: 'POST',
@@ -84,10 +68,9 @@ export const authService = {
 						const newToken = await this.refreshToken(refreshToken);
 						// Повторюємо запит з новим токеном
 						return this.getMe(newToken);
-					} catch (err) {
+					} catch {
 						throw new Error('Сесія закінчилась. Увійдіть знову.');
 					}
->>>>>>> 78d8282a91de0e2d3e71f9a3f097b2ced98d3848
 				}
 			}
 			throw new Error('Помилка отримання даних користувача');
