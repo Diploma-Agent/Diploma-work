@@ -6,6 +6,7 @@ import requests
 import hmac
 import hashlib
 import time
+import json
 from datetime import datetime, timedelta
 from finance.models import Transaction, TransactionCategory, SyncLog
 
@@ -34,29 +35,48 @@ class BybitService:
         
         if params is None:
             params = {}
+            
+        # Додаємо recvWindow для компенсації розсинхронізації часу
+        params['recvWindow'] = 20000
         
-        timestamp = str(int(time.time() * 1000))
+        # Використовуємо поточний час мінус 2 секунди, щоб уникнути помилки "timestamp in the future"
+        # якщо годинник клієнта поспішає
+        timestamp = str(int((time.time() - 2) * 1000))
         
-        # Sort parameters
-        sorted_params = sorted(params.items())
-        params_str = '&'.join([f"{k}={v}" for k, v in sorted_params])
-        
-        # Generate signature
-        signature = self._generate_signature(timestamp, params_str)
-        
-        headers = {
-            'X-BAPI-API-KEY': self.api_key,
-            'X-BAPI-TIMESTAMP': timestamp,
-            'X-BAPI-SIGN': signature,
-            'Content-Type': 'application/json'
-        }
+        if method == 'GET':
+            # Sort parameters for GET request
+            sorted_params = sorted(params.items())
+            params_str = '&'.join([f"{k}={v}" for k, v in sorted_params])
+            
+            # Generate signature
+            signature = self._generate_signature(timestamp, params_str)
+            
+            headers = {
+                'X-BAPI-API-KEY': self.api_key,
+                'X-BAPI-TIMESTAMP': timestamp,
+                'X-BAPI-SIGN': signature
+            }
+            
+            # Pass sorted_params to requests to ensure sending order matches signing order
+            response = requests.get(url, headers=headers, params=sorted_params)
+            
+        elif method == 'POST':
+            # For POST, params_str is the JSON string
+            # Use separators to remove spaces
+            params_json = json.dumps(params)
+            
+            signature = self._generate_signature(timestamp, params_json)
+            
+            headers = {
+                'X-BAPI-API-KEY': self.api_key,
+                'X-BAPI-TIMESTAMP': timestamp,
+                'X-BAPI-SIGN': signature,
+                'Content-Type': 'application/json'
+            }
+            
+            response = requests.post(url, headers=headers, data=params_json)
         
         try:
-            if method == 'GET':
-                response = requests.get(url, headers=headers, params=params)
-            elif method == 'POST':
-                response = requests.post(url, headers=headers, json=params)
-            
             response.raise_for_status()
             data = response.json()
             
@@ -187,7 +207,13 @@ class BybitService:
         """Validate Bybit API credentials"""
         service = BybitService(api_key, api_secret)
         try:
-            service.get_wallet_balance()
+            # Спроба 1: Перевірка для Unified Account
+            service.get_wallet_balance(account_type='UNIFIED')
             return True
-        except:
-            return False
+        except Exception:
+            try:
+                # Спроба 2: Перевірка для Standard Account (SPOT)
+                service.get_wallet_balance(account_type='SPOT')
+                return True
+            except Exception:
+                return False
