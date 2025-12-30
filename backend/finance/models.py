@@ -64,6 +64,7 @@ class BankConnection(models.Model):
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bank_connections')
+    name = models.CharField(max_length=255, blank=True, null=True)  # Назва підключення (наприклад: "Мій Monobank")
     bank_name = models.CharField(max_length=50, choices=BANK_CHOICES)
     
     # Зашифровані токени
@@ -86,7 +87,7 @@ class BankConnection(models.Model):
         verbose_name_plural = 'Bank Connections'
     
     def __str__(self):
-        return f"{self.user.username} - {self.bank_name}"
+        return f"{self.user.username} - {self.name or self.bank_name}"
 
 
 class CryptoExchange(models.Model):

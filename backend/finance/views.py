@@ -46,6 +46,7 @@ class AddBankConnectionView(views.APIView):
         serializer = AddBankConnectionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
+        name = serializer.validated_data.get('name', '')
         bank_name = serializer.validated_data['bank_name']
         access_token = serializer.validated_data['access_token']
         
@@ -68,6 +69,7 @@ class AddBankConnectionView(views.APIView):
             user=request.user,
             bank_name=bank_name,
             defaults={
+                'name': name or bank_name.capitalize(),
                 'access_token': access_token,
                 'status': 'active'
             }
@@ -189,24 +191,57 @@ class DeleteCryptoExchangeView(views.APIView):
             )
 
 
-class TransactionListView(generics.ListAPIView):
-    """Список транзакцій"""
-    serializer_class = TransactionSerializer
+class TransactionListView(views.APIView):
+    """Список транзакцій з API банків та бірж"""
     permission_classes = (IsAuthenticated,)
     
-    def get_queryset(self):
-        queryset = Transaction.objects.filter(user=self.request.user)
+    def get(self, request):
+        source = request.query_params.get('source', 'all')
+        days = int(request.query_params.get('days', 30))
         
-        # Фільтри
-        source = self.request.query_params.get('source')
-        if source:
-            queryset = queryset.filter(source=source)
+        all_transactions = []
         
-        trans_type = self.request.query_params.get('type')
-        if trans_type:
-            queryset = queryset.filter(type=trans_type)
-        
-        return queryset
+        try:
+            # Якщо source='all' або 'monobank', завантажуємо з Monobank
+            if source in ['all', 'monobank']:
+                try:
+                    bank = BankConnection.objects.get(
+                        user=request.user,
+                        bank_name='monobank',
+                        status='active'
+                    )
+                    monobank_transactions = MonobankService.get_transactions(
+                        bank.access_token,
+                        days=days
+                    )
+                    all_transactions.extend(monobank_transactions)
+                except BankConnection.DoesNotExist:
+                    pass
+            
+            # Якщо source='all' або 'pumb', завантажуємо з ПУМБ
+            if source in ['all', 'pumb']:
+                try:
+                    bank = BankConnection.objects.get(
+                        user=request.user,
+                        bank_name='pumb',
+                        status='active'
+                    )
+                    # TODO: Додати сервіс для ПУМБ
+                    # pumb_transactions = PUMBService.get_transactions(bank.access_token, days=days)
+                    # all_transactions.extend(pumb_transactions)
+                except BankConnection.DoesNotExist:
+                    pass
+            
+            # Сортуємо по даті (найновіші першими)
+            all_transactions.sort(key=lambda x: x['transaction_date'], reverse=True)
+            
+            return Response(all_transactions)
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class SyncView(views.APIView):
@@ -505,3 +540,40 @@ class ExchangeOrdersView(views.APIView):
             )
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BankAnalyticsView(views.APIView):
+    """Аналітика банківського рахунку"""
+    permission_classes = (IsAuthenticated,)
+    
+    def get(self, request):
+        try:
+            # Отримуємо транзакції користувача
+            bank = BankConnection.objects.filter(
+                user=request.user,
+                bank_name='monobank',
+                status='active'
+            ).first()
+            
+            if not bank:
+                return Response({'error': 'Банк не підключено'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Завантажуємо транзакції
+            transactions = MonobankService.get_transactions(bank.access_token, days=30)
+            
+            # Рахуємо баланс (це приклад, в реальності треба отримувати з API)
+            balance = sum(
+                t['amount'] if t['type'] == 'income' else -t['amount']
+                for t in transactions
+            )
+            
+            return Response({
+                'balance': balance,
+                'transactions': transactions
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )

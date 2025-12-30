@@ -4,7 +4,7 @@ from .views import (
     CryptoExchangeListView, AddCryptoExchangeView, DeleteCryptoExchangeView,
     TransactionListView, SyncView, SyncLogListView, TransactionCategoryListView,
     PUMBAuthInitView, PUMBAuthCallbackView,
-    ExchangeBalanceView, ExchangeOrdersView
+    ExchangeBalanceView, ExchangeOrdersView, BankAnalyticsView
 )
 
 app_name = 'finance'
@@ -37,4 +37,7 @@ urlpatterns = [
     
     # Sync logs
     path('sync-logs/', SyncLogListView.as_view(), name='sync_log_list'),
+    
+    # Analytics
+    path('analytics/bank/', BankAnalyticsView.as_view(), name='bank_analytics'),
 ]

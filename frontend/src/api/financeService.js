@@ -14,28 +14,28 @@ export const financeService = {
 	},
 
 	async addBank(token, data) {
-		const response = await fetch(`${API_URL}/banks/`, {
+		const response = await fetch(`${API_URL}/banks/add/`, {
 			method: 'POST',
 			headers: {
 				'Authorization': `Bearer ${token}`,
 				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify({
-				name: data.name,
-				bank_type: data.type,
-				api_key: data.apiKey,
+				name: data.name,  // Назва підключення
+				bank_name: data.type,  // monobank або pumb
+				access_token: data.apiKey,
 			}),
 		});
 
 		if (!response.ok) {
 			const error = await response.json();
-			throw new Error(error.detail || 'Помилка додавання банку');
+			throw new Error(error.error || 'Помилка додавання банку');
 		}
 		return response.json();
 	},
 
 	async deleteBank(token, id) {
-		const response = await fetch(`${API_URL}/banks/${id}/`, {
+		const response = await fetch(`${API_URL}/banks/${id}/delete/`, {
 			method: 'DELETE',
 			headers: {
 				'Authorization': `Bearer ${token}`,
@@ -43,6 +43,18 @@ export const financeService = {
 		});
 
 		if (!response.ok) throw new Error('Помилка видалення банку');
+	},
+
+	// === АНАЛІТИКА БАНКУ ===
+	async getBankAnalytics(token) {
+		const response = await fetch(`${API_URL}/analytics/bank/`, {
+			headers: {
+				'Authorization': `Bearer ${token}`,
+			},
+		});
+
+		if (!response.ok) throw new Error('Помилка отримання банківської аналітики');
+		return response.json();
 	},
 
 	// === БІРЖІ ===
@@ -65,7 +77,6 @@ export const financeService = {
 				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify({
-				name: data.name,
 				exchange_name: data.exchange,
 				api_key: data.apiKey,
 				api_secret: data.apiSecret,
@@ -74,7 +85,7 @@ export const financeService = {
 
 		if (!response.ok) {
 			const error = await response.json();
-			throw new Error(error.detail || 'Помилка додавання біржі');
+			throw new Error(error.error || 'Помилка додавання біржі');
 		}
 		return response.json();
 	},
@@ -90,31 +101,15 @@ export const financeService = {
 		if (!response.ok) throw new Error('Помилка видалення біржі');
 	},
 
-	async getExchangeBalance(token, exchange = 'bybit') {
-		const response = await fetch(`${API_URL}/exchanges/balance/?exchange=${exchange}`, {
+	// === ТРАНЗАКЦІЇ ===
+	async getTransactions(token, source = 'all', days = 30) {
+		const response = await fetch(`${API_URL}/transactions/?source=${source}&days=${days}`, {
 			headers: {
 				'Authorization': `Bearer ${token}`,
 			},
 		});
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || 'Помилка отримання балансу');
-		}
-		return response.json();
-	},
-
-	async getExchangeOrders(token, exchange = 'bybit', category = 'spot') {
-		const response = await fetch(`${API_URL}/exchanges/orders/?exchange=${exchange}&category=${category}`, {
-			headers: {
-				'Authorization': `Bearer ${token}`,
-			},
-		});
-
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || 'Помилка отримання ордерів');
-		}
+		if (!response.ok) throw new Error('Помилка отримання транзакцій');
 		return response.json();
 	},
 };

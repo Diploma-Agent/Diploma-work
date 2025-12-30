@@ -10,12 +10,13 @@ class BankConnectionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = BankConnection
-        fields = ('id', 'bank_name', 'status', 'account_name', 'last_sync', 'created_at')
+        fields = ('id', 'name', 'bank_name', 'status', 'account_name', 'last_sync', 'created_at')
         read_only_fields = ('id', 'status', 'last_sync', 'created_at')
 
 
 class AddBankConnectionSerializer(serializers.Serializer):
     """Serializer для додавання підключення до банку"""
+    name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     bank_name = serializers.ChoiceField(choices=[('monobank', 'Monobank'), ('pumb', 'ПУМБ')])
     access_token = serializers.CharField(write_only=True)
 

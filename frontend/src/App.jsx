@@ -5,6 +5,7 @@ import Login from './templates/Login';
 import Profile from './templates/Profile';
 import Dashboard from './templates/Dashboard';
 import Analytics from './templates/Analytics';
+import Transactions from './templates/Transactions';
 
 function App() {
 	return (
@@ -14,7 +15,7 @@ function App() {
 				<Route path="/login" element={<Login />} />
 				<Route path="/profile" element={<Profile />} />
 				<Route path="/dashboard" element={<Dashboard />} />
-				<Route path="/transactions" element={<Dashboard />} />
+				<Route path="/transactions" element={<Transactions />} />
 				<Route path="/analytics" element={<Analytics />} />
 				<Route path="/" element={<Navigate to="/login" />} />
 			</Routes>

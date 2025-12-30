@@ -145,7 +145,6 @@ const TokensTab = () => {
                         >
                             <option value="bybit">Bybit</option>
                             <option value="binance">Binance</option>
-                            <option value="whitebit">WhiteBIT</option>
                             <option value="okx">OKX</option>
                         </select>
                     </label>
@@ -175,7 +174,7 @@ const TokensTab = () => {
                             required
                         />
                         <small className="input-hint">
-                            ⚠️ Ключі зберігаються локально та не передаються на сервер
+                            <em>Примітка:</em> Ваші API ключі зберігаються у зашифрованому вигляді і не відображаються повністю для безпеки.
                         </small>
                     </label>
 
