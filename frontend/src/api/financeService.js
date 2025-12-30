@@ -101,6 +101,32 @@ export const financeService = {
 		if (!response.ok) throw new Error('Помилка видалення біржі');
 	},
 
+	async getExchangeBalance(token, exchange) {
+		const response = await fetch(`${API_URL}/exchanges/balance/?exchange=${exchange}`, {
+			headers: {
+				'Authorization': `Bearer ${token}`,
+			},
+		});
+
+		if (!response.ok) throw new Error('Помилка отримання балансу біржі');
+		return response.json();
+	},
+
+	async getExchangeOrders(token, exchange, category = 'spot', symbol = '', settleCoin = '') {
+		let url = `${API_URL}/exchanges/orders/?exchange=${exchange}&category=${category}`;
+		if (symbol) url += `&symbol=${symbol}`;
+		if (settleCoin) url += `&settleCoin=${settleCoin}`;
+
+		const response = await fetch(url, {
+			headers: {
+				'Authorization': `Bearer ${token}`,
+			},
+		});
+
+		if (!response.ok) throw new Error('Помилка отримання ордерів');
+		return response.json();
+	},
+
 	// === ТРАНЗАКЦІЇ ===
 	async getTransactions(token, source = 'all', days = 30) {
 		const response = await fetch(`${API_URL}/transactions/?source=${source}&days=${days}`, {
