@@ -6,6 +6,7 @@ import Profile from './templates/Profile';
 import Dashboard from './templates/Dashboard';
 import Analytics from './templates/Analytics';
 import Transactions from './templates/Transactions';
+import ChatComponent from './components/ChatComponent';
 
 function App() {
 	return (
@@ -19,6 +20,7 @@ function App() {
 				<Route path="/analytics" element={<Analytics />} />
 				<Route path="/" element={<Navigate to="/login" />} />
 			</Routes>
+			<ChatComponent />
 		</Router>
 	);
 }
