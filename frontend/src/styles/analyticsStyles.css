@@ -169,6 +169,7 @@
 .analytics-card--bank {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
     border-color: rgba(102, 126, 234, 0.3);
+    margin-bottom: 40px
 }
 
 .analytics-card--bank:hover {
@@ -309,6 +310,12 @@
     font-size: 1.2rem;
 }
 
+.savings-row .value {
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: #fbbf24;
+}
+
 .forecast-info {
     text-align: center;
 }
@@ -359,7 +366,7 @@
 }
 
 .category-amount {
-    color: #4ade80;
+    color: #f87171;
     font-weight: 700;
     font-size: 1.1rem;
 }
@@ -664,16 +671,12 @@
 }
 
 .analytics-loading {
-    position: fixed;
-    inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    width: 100%;
     color: #fff;
-    z-index: 9999;
 }
 
 .spinner {
@@ -722,5 +725,32 @@
     color: #fff;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Loading Styles */
+.analytics-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 

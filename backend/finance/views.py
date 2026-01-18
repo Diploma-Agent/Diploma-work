@@ -561,10 +561,15 @@ class BankAnalyticsView(views.APIView):
             # Завантажуємо транзакції
             transactions = MonobankService.get_transactions(bank.access_token, days=30)
             
-            # Рахуємо баланс (це приклад, в реальності треба отримувати з API)
+            # Отримуємо реальний баланс з API
+            client_info = MonobankService.get_client_info(bank.access_token)
+            
+            # Рахуємо баланс всіх гривневих рахунків (код 980)
+            # Баланс приходить в копійках, тому ділимо на 100
             balance = sum(
-                t['amount'] if t['type'] == 'income' else -t['amount']
-                for t in transactions
+                account['balance'] / 100 
+                for account in client_info.get('accounts', []) 
+                if account.get('currencyCode') == 980
             )
             
             return Response({
