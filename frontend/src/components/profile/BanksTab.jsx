@@ -16,7 +16,9 @@ const BanksTab = ({
     };
 
     const getBankIcon = (bankType) => {
-        const logo = bankLogos[bankType];
+        if (!bankType) return <span style={{ fontSize: '32px' }}>🏦</span>;
+        
+        const logo = bankLogos[bankType.toLowerCase()];
         if (!logo) {
             return <span style={{ fontSize: '32px' }}>🏦</span>;
         }
@@ -107,11 +109,11 @@ const BanksTab = ({
                     banks.map(bank => (
                         <div key={bank.id} className="item-card">
                             <div className="item-icon">
-                                {getBankIcon(bank.bank_type)}
+                                {getBankIcon(bank.bank_name)}
                             </div>
                             <div className="item-info">
                                 <h4 className="item-name">{bank.name}</h4>
-                                <p className="item-detail">{bank.bank_type?.toUpperCase()}</p>
+                                <p className="item-detail">{bank.bank_name?.toUpperCase()}</p>
                                 <p className="item-date">
                                     Додано: {new Date(bank.created_at).toLocaleDateString('uk-UA')}
                                 </p>

@@ -84,7 +84,9 @@ const TokensTab = () => {
     };
 
     const getExchangeIcon = (exchange) => {
-        const logo = exchangeLogos[exchange];
+        if (!exchange) return <span style={{ fontSize: '32px' }}>🪙</span>;
+
+        const logo = exchangeLogos[exchange.toLowerCase()];
         if (!logo) {
             return <span style={{ fontSize: '32px' }}>🪙</span>;
         }
@@ -195,11 +197,11 @@ const TokensTab = () => {
                     tokens.map(token => (
                         <div key={token.id} className="item-card">
                             <div className="item-icon">
-                                {getExchangeIcon(token.exchange)}
+                                {getExchangeIcon(token.exchange_name)}
                             </div>
                             <div className="item-info">
                                 <h4 className="item-name">{token.name}</h4>
-                                <p className="item-detail">{token.exchange?.toUpperCase()}</p>
+                                <p className="item-detail">{token.exchange_name?.toUpperCase()}</p>
                                 <p className="item-detail token-value">
                                     API Key: {token.api_key_masked || 'Захищено'}
                                 </p>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Navbar from '../components/Navbar';
 import { financeService } from '../api/financeService';
 import '../styles/analyticsStyles.css';
@@ -121,6 +122,26 @@ function Analytics() {
             .filter(t => t.type === 'expense')
             .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
+        // Підготовка даних для графіку витрат та надходжень по днях
+        const chartData = [];
+        const daysInMonth = now.getDate(); // Показуємо дні до сьогодні
+        
+        for (let i = 1; i <= daysInMonth; i++) {
+            chartData.push({ name: `${i}`, expense: 0, income: 0 });
+        }
+
+        monthTransactions.forEach(t => {
+            const day = new Date(t.transaction_date).getDate();
+            // Упевнимося, що транзакція потрапляє в діапазон
+            if (day <= daysInMonth && chartData[day - 1]) {
+                if (t.type === 'expense') {
+                    chartData[day - 1].expense += parseFloat(t.amount);
+                } else if (t.type === 'income') {
+                    chartData[day - 1].income += parseFloat(t.amount);
+                }
+            }
+        });
+
         const categoryExpenses = {};
         monthTransactions
             .filter(t => t.type === 'expense')
@@ -145,6 +166,7 @@ function Analytics() {
             expenses,
             netIncome: income - expenses,
             topCategories,
+            chartData,
             averageDailyExpenses: averageDailyExpenses.toFixed(2),
             forecastBalance: forecastBalance.toFixed(2),
             recommendedInvestment: recommendedInvestment.toFixed(2),
@@ -359,6 +381,43 @@ function Analytics() {
                                                 При середніх витратах {bankAnalytics.averageDailyExpenses} UAH/день
                                             </p>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Графік витрат */}
+                                <div className="analytics-card analytics-card--full analytics-card--bank" style={{ marginBottom: '35px' }}>
+                                    <div className="card-icon">📉</div>
+                                    <h3 className="card-title">Динаміка надходжень та витрат (поточний місяць)</h3>
+                                    <div style={{ width: '100%', height: 300 }}>
+                                        <ResponsiveContainer>
+                                            <BarChart data={bankAnalytics.chartData}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                                                <XAxis 
+                                                    dataKey="name" 
+                                                    stroke="#94a3b8" 
+                                                    tick={{ fill: '#94a3b8', fontSize: 12 }}
+                                                    tickLine={false}
+                                                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                                                />
+                                                <YAxis 
+                                                    stroke="#94a3b8" 
+                                                    tick={{ fill: '#94a3b8', fontSize: 12 }}
+                                                    tickLine={false}
+                                                    axisLine={false}
+                                                    width={60}
+                                                />
+                                                <Tooltip 
+                                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', borderRadius: '8px' }}
+                                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                                    formatter={(value, name) => [
+                                                        `${parseFloat(value).toFixed(2)} UAH`, 
+                                                        name === 'income' ? 'Надходження' : 'Витрати'
+                                                    ]}
+                                                />
+                                                <Bar dataKey="income" name="income" fill="#4ade80" radius={[4, 4, 0, 0]} />
+                                                <Bar dataKey="expense" name="expense" fill="#f87171" radius={[4, 4, 0, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
                                     </div>
                                 </div>
 
