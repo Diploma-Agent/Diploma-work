@@ -203,6 +203,10 @@ PUMB_REDIRECT_URI = config('PUMB_REDIRECT_URI', default='http://localhost:8000/a
 # Google Gemini AI
 GEMINI_API_KEY = config('GEMINI_API_KEY')
 
+# Google Vertex AI Credentials
+GOOGLE_CREDENTIALS = config('GOOGLE_CREDENTIALS', default='')
+GOOGLE_CLOUD_PROJECT = config('GOOGLE_CLOUD_PROJECT', default='')
+
 # Cache settings (для кешування транзакцій)
 CACHES = {
     'default': {
