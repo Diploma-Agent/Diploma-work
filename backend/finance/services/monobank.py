@@ -93,60 +93,49 @@ class MonobankService:
     @staticmethod
     def _get_account_transactions(token, account_id, days=30):
         """Отримати транзакції для конкретного рахунку"""
-        # Кеш для кожного рахунку окремо
         cache_key = f'monobank_account_{token[:20]}_{account_id}_{days}'
         cached_data = cache.get(cache_key)
-        
         if cached_data:
             return cached_data
-        
+
         headers = {'X-Token': token}
-        
-        # Monobank приймає timestamp в секундах
         from_time = int((datetime.now() - timedelta(days=days)).timestamp())
         to_time = int(datetime.now().timestamp())
-        
+
         url = f'{MonobankService.BASE_URL}/personal/statement/{account_id}/{from_time}/{to_time}'
         response = requests.get(url, headers=headers)
-        
+
         if response.status_code == 200:
             transactions = response.json()
-            formatted = MonobankService._format_transactions(transactions)
-            
-            # Кешуємо на 10 хвилин
+            # Передаємо account_id щоб зберегти в транзакції
+            formatted = MonobankService._format_transactions(transactions, account_id)
             cache.set(cache_key, formatted, MonobankService.CACHE_TIMEOUT)
             return formatted
         elif response.status_code == 429:
-            # Занадто багато запитів
             print(f'Too many requests для рахунку {account_id}')
             return []
         else:
-            print(f'Помилка {response.status_code} для рахунку {account_id}')
+            print(f'Помилка {response.status_code} для рахунку {account_id}: {response.text}')
             return []
-    
+
     @staticmethod
-    def _format_transactions(transactions):
+    def _format_transactions(transactions, account_id=None):
         """Форматувати транзакції в єдиний формат"""
         formatted = []
-        
         for t in transactions:
-            # Визначаємо тип транзакції
-            amount = t.get('amount', 0) / 100  # Monobank повертає суму в копійках
-            
+            amount = t.get('amount', 0) / 100
             if amount > 0:
                 trans_type = 'income'
             else:
                 trans_type = 'expense'
                 amount = abs(amount)
-            
-            # Отримуємо опис
+
             description = t.get('description', 'Без опису')
-            
-            # Для контрагента беремо перший рядок опису
             counterparty = description.split('\n')[0] if '\n' in description else description
-            
+
             formatted.append({
                 'id': t.get('id'),
+                'account_id': account_id,          # зберігаємо account_id
                 'source': 'monobank',
                 'type': trans_type,
                 'amount': amount,
@@ -156,5 +145,4 @@ class MonobankService:
                 'transaction_date': datetime.fromtimestamp(t.get('time')).isoformat(),
                 'raw_data': t
             })
-        
         return formatted

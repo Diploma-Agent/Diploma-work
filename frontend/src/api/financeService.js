@@ -138,4 +138,60 @@ export const financeService = {
 		if (!response.ok) throw new Error('Помилка отримання транзакцій');
 		return response.json();
 	},
+
+	// === AI AGENTS ===
+	async aiChat(token, message) {
+		const response = await fetch(`${API_URL}/ai/chat/`, {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ message }),
+		});
+
+		if (!response.ok) throw new Error('Помилка AI чату');
+		return response.json();
+	},
+
+	async aiAnalyst(token, question = null) {
+		const response = await fetch(`${API_URL}/ai/analyst/`, {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ question }),
+		});
+
+		if (!response.ok) throw new Error('Помилка AI аналітика');
+		return response.json();
+	},
+
+	async aiForecast(token, days = 30) {
+		const response = await fetch(`${API_URL}/ai/forecast/?days=${days}`, {
+			headers: { 'Authorization': `Bearer ${token}` },
+		});
+
+		if (!response.ok) throw new Error('Помилка AI прогнозу');
+		return response.json();
+	},
+
+	async aiAnomaly(token) {
+		const response = await fetch(`${API_URL}/ai/anomaly/`, {
+			headers: { 'Authorization': `Bearer ${token}` },
+		});
+
+		if (!response.ok) throw new Error('Помилка AI аномалій');
+		return response.json();
+	},
+
+	async aiInvestment(token) {
+		const response = await fetch(`${API_URL}/ai/investment/`, {
+			headers: { 'Authorization': `Bearer ${token}` },
+		});
+
+		if (!response.ok) throw new Error('Помилка AI інвестицій');
+		return response.json();
+	},
 };

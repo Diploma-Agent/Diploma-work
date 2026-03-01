@@ -1,2 +1,4 @@
 settings.json
 /backend/docs
+frontend/.env
+backend/.env

@@ -4,7 +4,8 @@ from .views import (
     CryptoExchangeListView, AddCryptoExchangeView, DeleteCryptoExchangeView,
     TransactionListView, SyncView, SyncLogListView, TransactionCategoryListView,
     PUMBAuthInitView, PUMBAuthCallbackView,
-    ExchangeBalanceView, ExchangeOrdersView, BankAnalyticsView
+    ExchangeBalanceView, ExchangeOrdersView, BankAnalyticsView,
+    AIAnalystView, AIInvestmentView, AIForecastView, AIAnomalyView, AIChatView
 )
 
 app_name = 'finance'
@@ -40,4 +41,11 @@ urlpatterns = [
     
     # Analytics
     path('analytics/bank/', BankAnalyticsView.as_view(), name='bank_analytics'),
+    
+    # AI Agents
+    path('ai/analyst/', AIAnalystView.as_view(), name='ai_analyst'),
+    path('ai/investment/', AIInvestmentView.as_view(), name='ai_investment'),
+    path('ai/forecast/', AIForecastView.as_view(), name='ai_forecast'),
+    path('ai/anomaly/', AIAnomalyView.as_view(), name='ai_anomaly'),
+    path('ai/chat/', AIChatView.as_view(), name='ai_chat'),
 ]

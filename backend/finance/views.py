@@ -20,6 +20,13 @@ from .services.pumb import PUMBService
 from .services.binance import BinanceService
 from .services.bybit import BybitService
 from .services.okx import OKXService
+from .services.ai_agents import (
+    FinancialAnalystAgent,
+    InvestmentAdvisorAgent,
+    ForecastAgent,
+    AnomalyDetectorAgent,
+    ChatAgent
+)
 
 
 class BankConnectionListView(generics.ListAPIView):
@@ -582,3 +589,180 @@ class BankAnalyticsView(views.APIView):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+def _get_real_balance(access_token: str) -> tuple:
+    """Реальний баланс + список UAH рахунків (не кредитних)"""
+    try:
+        client_info = MonobankService.get_client_info(access_token)
+        accounts = client_info.get('accounts', [])
+
+        # Логуємо всі рахунки для дебагу
+        for acc in accounts:
+            print(f"Account: id={acc.get('id')}, type={acc.get('type')}, "
+                  f"currency={acc.get('currencyCode')}, balance={acc.get('balance', 0)/100}")
+
+        # Основний чорний рахунок (тип 'black') — дебетова карта
+        main_accounts = [
+            acc for acc in accounts
+            if acc.get('currencyCode') == 980
+            and acc.get('type') in ['black', 'white', 'yellow', 'iron', 'platinum', 'other']
+        ]
+
+        balance = sum(acc['balance'] / 100 for acc in main_accounts)
+        main_account_ids = [acc['id'] for acc in main_accounts]
+
+        return balance, main_account_ids
+    except Exception as e:
+        print(f"_get_real_balance error: {e}")
+        return 0.0, []
+
+
+def _get_uah_transactions(access_token: str, days: int = 30) -> list:
+    """Транзакції тільки з основних UAH рахунків (без кредитних)"""
+    try:
+        balance, main_account_ids = _get_real_balance(access_token)
+        all_transactions = MonobankService.get_transactions(access_token, days=days)
+
+        # Якщо є account_id — фільтруємо по основних рахунках
+        if main_account_ids:
+            filtered = [
+                t for t in all_transactions
+                if t.get('account_id') in main_account_ids
+            ]
+            print(f"Filtered: {len(filtered)}/{len(all_transactions)} transactions")
+            return filtered
+
+        return all_transactions
+    except Exception as e:
+        print(f"_get_uah_transactions error: {e}")
+        return []
+
+
+class AIAnalystView(views.APIView):
+    """AI Фінансовий Аналітик"""
+    permission_classes = (IsAuthenticated,)
+    
+    def post(self, request):
+        question = request.data.get('question', None)
+        
+        try:
+            bank = BankConnection.objects.filter(
+                user=request.user, bank_name='monobank', status='active'
+            ).first()
+            
+            transactions = []
+            if bank:
+                transactions = MonobankService.get_transactions(bank.access_token, days=30)
+            
+            result = FinancialAnalystAgent.analyze(transactions, question)
+            return Response(result)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AIInvestmentView(views.APIView):
+    """AI Інвестиційний Радник"""
+    permission_classes = (IsAuthenticated,)
+    
+    def get(self, request):
+        try:
+            bank = BankConnection.objects.filter(
+                user=request.user, bank_name='monobank', status='active'
+            ).first()
+            
+            transactions = []
+            balance = 0.0
+            if bank:
+                transactions = _get_uah_transactions(bank.access_token, days=30)
+                balance = _get_real_balance(bank.access_token)[0]
+            
+            income = sum(t['amount'] for t in transactions if t['type'] == 'income')
+            expenses = sum(t['amount'] for t in transactions if t['type'] == 'expense')
+            
+            bank_data = {
+                'balance': balance,
+                'income': income,
+                'expenses': expenses
+            }
+            result = InvestmentAdvisorAgent.advise(bank_data)
+            return Response(result)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AIForecastView(views.APIView):
+    """AI Прогнозист"""
+    permission_classes = (IsAuthenticated,)
+    
+    def get(self, request):
+        days = int(request.query_params.get('days', 30))
+        
+        try:
+            bank = BankConnection.objects.filter(
+                user=request.user, bank_name='monobank', status='active'
+            ).first()
+            
+            transactions = []
+            if bank:
+                transactions = MonobankService.get_transactions(bank.access_token, days=30)
+            
+            result = ForecastAgent.forecast(transactions, days)
+            return Response(result)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AIAnomalyView(views.APIView):
+    """AI Детектор Аномалій"""
+    permission_classes = (IsAuthenticated,)
+    
+    def get(self, request):
+        try:
+            bank = BankConnection.objects.filter(
+                user=request.user, bank_name='monobank', status='active'
+            ).first()
+            
+            transactions = []
+            if bank:
+                transactions = MonobankService.get_transactions(bank.access_token, days=30)
+            
+            result = AnomalyDetectorAgent.detect(transactions)
+            return Response(result)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AIChatView(views.APIView):
+    """AI Чат Асистент"""
+    permission_classes = (IsAuthenticated,)
+    
+    def post(self, request):
+        message = request.data.get('message', '')
+        history = request.data.get('history', [])  # історія з фронтенду
+
+        if not message:
+            return Response({'error': 'Повідомлення не може бути порожнім'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            bank = BankConnection.objects.filter(
+                user=request.user, bank_name='monobank', status='active'
+            ).first()
+            
+            context = {}
+            if bank:
+                balance, _ = _get_real_balance(bank.access_token)
+                transactions = _get_uah_transactions(bank.access_token, days=30)
+                income = sum(t['amount'] for t in transactions if t['type'] == 'income')
+                expenses = sum(t['amount'] for t in transactions if t['type'] == 'expense')
+                context = {
+                    'balance': round(balance, 2),
+                    'income': round(income, 2),
+                    'expenses': round(expenses, 2)
+                }
+                print(f"Chat context: {context}")
+            
+            result = ChatAgent.chat(message, context, history=history)
+            return Response(result)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

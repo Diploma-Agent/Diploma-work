@@ -11,8 +11,13 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 from datetime import timedelta
 from decouple import config
+
+# Завантажуємо .env файл
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -194,6 +199,17 @@ CELERY_ENABLE_UTC = True
 PUMB_CLIENT_ID = config('PUMB_CLIENT_ID', default='')
 PUMB_CLIENT_SECRET = config('PUMB_CLIENT_SECRET', default='')
 PUMB_REDIRECT_URI = config('PUMB_REDIRECT_URI', default='http://localhost:8000/api/finance/pumb/callback')
+
+# Google Gemini AI
+GEMINI_API_KEY = config('GEMINI_API_KEY')
+
+# Cache settings (для кешування транзакцій)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
 
 # Додаємо налаштування логування для виводу помилок у консоль
 LOGGING = {
