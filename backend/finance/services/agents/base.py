@@ -13,10 +13,9 @@ client = genai.Client(api_key=api_key)
 
 # Моделі у порядку пріоритету — автоматичний fallback
 MODELS = [
-    'gemini-2.5-flash-preview-05-20',
+    'gemini-3-flash-preview',
     'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
+    'gemini-2.5-flash-preview-05-20',
 ]
 MODEL = MODELS[0]
 

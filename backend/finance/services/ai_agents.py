@@ -3,8 +3,8 @@ import os
 
 
 # Ініціалізація Gemini через новий пакет
-client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY', 'AIzaSyB3k-WUJ-av7C4zWZqaS1ZRf6oE5qc-mZU'))
-MODEL = 'gemini-2.5-flash'
+client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
+MODEL = 'gemini-3-flash-preview'
 
 
 from .agents import (
