@@ -1,5 +1,4 @@
 from .base import generate_with_retry
-from google.genai import types
 
 
 class ChatAgent:
@@ -71,9 +70,7 @@ class ChatAgent:
 
         response = generate_with_retry(
             contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=ChatAgent.SYSTEM_PROMPT
-            )
+            system_instruction=ChatAgent.SYSTEM_PROMPT
         )
 
         agent_name = ChatAgent._get_agent_name(message)

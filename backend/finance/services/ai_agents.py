@@ -1,10 +1,9 @@
-from google import genai
+import google.generativeai as genai
 import os
 
 
-# Ініціалізація Gemini через новий пакет
-client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
-MODEL = 'gemini-3-flash-preview'
+# Ре-експорт з base.py для сумісності
+from .agents.base import MODEL
 
 
 from .agents import (

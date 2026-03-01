@@ -1,4 +1,4 @@
-from .base import client, MODEL, generate_with_retry
+from .base import MODEL, generate_with_retry
 from datetime import datetime
 
 
