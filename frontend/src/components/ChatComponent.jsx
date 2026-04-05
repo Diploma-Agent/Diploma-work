@@ -26,8 +26,8 @@ const formatMessage = (text) => {
         } else if (line.startsWith('# ')) {
             flushList();
             result.push(<h3 key={i} className="msg-h1">{formatInline(line.replace('# ', ''))}</h3>);
-        } else if (line.match(/^[\*\-•]\s/)) {
-            listBuffer.push(<li key={i}>{formatInline(line.replace(/^[\*\-•]\s/, ''))}</li>);
+        } else if (line.match(/^[-*•]\s/)) {
+            listBuffer.push(<li key={i}>{formatInline(line.replace(/^[-*•]\s/, ''))}</li>);
         } else if (line.match(/^\d+\.\s/)) {
             listBuffer.push(<li key={i}>{formatInline(line.replace(/^\d+\.\s/, ''))}</li>);
         } else if (line.trim() === '') {
@@ -62,6 +62,8 @@ const formatInline = (text) => {
 function ChatComponent() {
     const [isOpen, setIsOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const [chatPosition, setChatPosition] = useState(null);
     const [messages, setMessages] = useState([
         { id: 1, text: 'Привіт! Я ваш фінансовий помічник. Чим можу допомогти?', sender: 'bot', agent: 'Фінансовий Асистент 🤖' }
     ]);
@@ -69,9 +71,44 @@ function ChatComponent() {
     const [isTyping, setIsTyping] = useState(false);
     const [error, setError] = useState(null);
     const messagesEndRef = useRef(null);
+    const chatWindowRef = useRef(null);
+    const dragOffsetRef = useRef({ x: 0, y: 0 });
 
     const toggleChat = () => setIsOpen(!isOpen);
     const toggleExpand = () => setIsExpanded(!isExpanded);
+
+    const clampPosition = (left, top) => {
+        const chatEl = chatWindowRef.current;
+        if (!chatEl) return { left, top };
+
+        const maxLeft = Math.max(window.innerWidth - chatEl.offsetWidth, 0);
+        const maxTop = Math.max(window.innerHeight - chatEl.offsetHeight, 0);
+
+        return {
+            left: Math.min(Math.max(left, 0), maxLeft),
+            top: Math.min(Math.max(top, 0), maxTop)
+        };
+    };
+
+    const handleHeaderPointerDown = (e) => {
+        if (e.button !== undefined && e.button !== 0) return;
+        if (e.target.closest('button')) return;
+
+        const chatEl = chatWindowRef.current;
+        if (!chatEl) return;
+
+        const rect = chatEl.getBoundingClientRect();
+        const nextLeft = chatPosition?.left ?? rect.left;
+        const nextTop = chatPosition?.top ?? rect.top;
+
+        dragOffsetRef.current = {
+            x: e.clientX - nextLeft,
+            y: e.clientY - nextTop,
+        };
+
+        setChatPosition({ left: nextLeft, top: nextTop });
+        setIsDragging(true);
+    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -80,6 +117,42 @@ function ChatComponent() {
     useEffect(() => {
         scrollToBottom();
     }, [messages, isOpen]);
+
+    useEffect(() => {
+        if (!isDragging) return;
+
+        const handlePointerMove = (e) => {
+            const unclampedLeft = e.clientX - dragOffsetRef.current.x;
+            const unclampedTop = e.clientY - dragOffsetRef.current.y;
+            setChatPosition(clampPosition(unclampedLeft, unclampedTop));
+        };
+
+        const handlePointerUp = () => {
+            setIsDragging(false);
+        };
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+
+        return () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+        };
+    }, [isDragging]);
+
+    useEffect(() => {
+        if (!chatPosition) return;
+
+        const handleResize = () => {
+            setChatPosition((prev) => {
+                if (!prev) return prev;
+                return clampPosition(prev.left, prev.top);
+            });
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [chatPosition, isExpanded]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -134,8 +207,12 @@ function ChatComponent() {
     return (
         <div className="chat-widget-container">
             {isOpen ? (
-                <div className={`chat-window ${isExpanded ? 'chat-window--expanded' : ''}`}>
-                    <div className="chat-header">
+                <div
+                    ref={chatWindowRef}
+                    className={`chat-window ${isExpanded ? 'chat-window--expanded' : ''} ${isDragging ? 'chat-window--dragging' : ''}`}
+                    style={chatPosition ? { left: `${chatPosition.left}px`, top: `${chatPosition.top}px`, right: 'auto', bottom: 'auto' } : undefined}
+                >
+                    <div className="chat-header" onPointerDown={handleHeaderPointerDown}>
                         <div className="chat-title">
                             <span>🤖</span> Фінансовий помічник
                         </div>

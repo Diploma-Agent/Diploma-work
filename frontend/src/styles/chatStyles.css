@@ -53,6 +53,10 @@
     overflow: hidden;
 }
 
+.chat-window--dragging {
+    transition: none;
+}
+
 .chat-window--expanded {
     width: 680px;
     height: 80vh;
@@ -70,6 +74,14 @@
     background: linear-gradient(135deg, #6c63ff, #4facfe);
     border-radius: 16px 16px 0 0;
     color: white;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+.chat-window--dragging .chat-header {
+    cursor: grabbing;
 }
 
 .chat-title {
