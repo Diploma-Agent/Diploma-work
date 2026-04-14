@@ -33,7 +33,7 @@ class BankConnectionListView(generics.ListAPIView):
     """Список підключень до банків"""
     serializer_class = BankConnectionSerializer
     permission_classes = (IsAuthenticated,)
-    
+
     def get_queryset(self):
         return BankConnection.objects.filter(user=self.request.user)
 
@@ -41,7 +41,7 @@ class BankConnectionListView(generics.ListAPIView):
 class AddBankConnectionView(views.APIView):
     """Додати підключення до банку"""
     permission_classes = (IsAuthenticated,)
-    
+
     @swagger_auto_schema(
         request_body=AddBankConnectionSerializer,
         responses={
@@ -52,11 +52,11 @@ class AddBankConnectionView(views.APIView):
     def post(self, request):
         serializer = AddBankConnectionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         name = serializer.validated_data.get('name', '')
         bank_name = serializer.validated_data['bank_name']
         access_token = serializer.validated_data['access_token']
-        
+
         # Перевіряємо токен
         if bank_name == 'monobank':
             if not MonobankService.validate_token(access_token):
@@ -70,7 +70,7 @@ class AddBankConnectionView(views.APIView):
                     {'error': 'Невалідний токен ПУМБ'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
+
         # Створюємо або оновлюємо підключення
         bank_connection, created = BankConnection.objects.update_or_create(
             user=request.user,
@@ -81,7 +81,7 @@ class AddBankConnectionView(views.APIView):
                 'status': 'active'
             }
         )
-        
+
         return Response(
             BankConnectionSerializer(bank_connection).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
@@ -91,7 +91,7 @@ class AddBankConnectionView(views.APIView):
 class DeleteBankConnectionView(views.APIView):
     """Видалити підключення до банку"""
     permission_classes = (IsAuthenticated,)
-    
+
     @swagger_auto_schema(
         responses={
             204: "Підключення видалено",
@@ -114,7 +114,7 @@ class CryptoExchangeListView(generics.ListAPIView):
     """Список підключень до бірж"""
     serializer_class = CryptoExchangeSerializer
     permission_classes = (IsAuthenticated,)
-    
+
     def get_queryset(self):
         return CryptoExchange.objects.filter(user=self.request.user)
 
@@ -122,7 +122,7 @@ class CryptoExchangeListView(generics.ListAPIView):
 class AddCryptoExchangeView(views.APIView):
     """Додати підключення до біржі"""
     permission_classes = (IsAuthenticated,)
-    
+
     @swagger_auto_schema(
         request_body=AddCryptoExchangeSerializer,
         responses={
@@ -133,12 +133,12 @@ class AddCryptoExchangeView(views.APIView):
     def post(self, request):
         serializer = AddCryptoExchangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         exchange_name = serializer.validated_data['exchange_name']
         api_key = serializer.validated_data['api_key']
         api_secret = serializer.validated_data['api_secret']
         api_passphrase = serializer.validated_data.get('api_passphrase', '')
-        
+
         # Перевіряємо API ключі
         if exchange_name == 'binance':
             if not BinanceService.validate_credentials(api_key, api_secret):
@@ -158,7 +158,7 @@ class AddCryptoExchangeView(views.APIView):
                     {'error': 'Невалідні API ключі OKX'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
+
         exchange, created = CryptoExchange.objects.update_or_create(
             user=request.user,
             exchange_name=exchange_name,
@@ -169,7 +169,7 @@ class AddCryptoExchangeView(views.APIView):
                 'status': 'active'
             }
         )
-        
+
         return Response(
             CryptoExchangeSerializer(exchange).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
@@ -179,7 +179,7 @@ class AddCryptoExchangeView(views.APIView):
 class DeleteCryptoExchangeView(views.APIView):
     """Видалити підключення до біржі"""
     permission_classes = (IsAuthenticated,)
-    
+
     @swagger_auto_schema(
         responses={
             204: "Підключення видалено",
@@ -201,13 +201,13 @@ class DeleteCryptoExchangeView(views.APIView):
 class TransactionListView(views.APIView):
     """Список транзакцій з API банків та бірж"""
     permission_classes = (IsAuthenticated,)
-    
+
     def get(self, request):
         source = request.query_params.get('source', 'all')
         days = int(request.query_params.get('days', 30))
-        
+
         all_transactions = []
-        
+
         try:
             # Якщо source='all' або 'monobank', завантажуємо з Monobank
             if source in ['all', 'monobank']:
@@ -224,7 +224,7 @@ class TransactionListView(views.APIView):
                     all_transactions.extend(monobank_transactions)
                 except BankConnection.DoesNotExist:
                     pass
-            
+
             # Якщо source='all' або 'pumb', завантажуємо з ПУМБ
             if source in ['all', 'pumb']:
                 try:
@@ -238,12 +238,13 @@ class TransactionListView(views.APIView):
                     # all_transactions.extend(pumb_transactions)
                 except BankConnection.DoesNotExist:
                     pass
-            
+
             # Сортуємо по даті (найновіші першими)
-            all_transactions.sort(key=lambda x: x['transaction_date'], reverse=True)
-            
+            all_transactions.sort(
+                key=lambda x: x['transaction_date'], reverse=True)
+
             return Response(all_transactions)
-            
+
         except Exception as e:
             return Response(
                 {'error': str(e)},
@@ -254,7 +255,7 @@ class TransactionListView(views.APIView):
 class SyncView(views.APIView):
     """Синхронізація транзакцій"""
     permission_classes = (IsAuthenticated,)
-    
+
     @swagger_auto_schema(
         request_body=SyncRequestSerializer,
         responses={
@@ -275,10 +276,10 @@ class SyncView(views.APIView):
     def post(self, request):
         serializer = SyncRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         source = serializer.validated_data['source']
         days = serializer.validated_data['days']
-        
+
         try:
             if source == 'monobank':
                 connection = BankConnection.objects.get(
@@ -288,7 +289,7 @@ class SyncView(views.APIView):
                 service = MonobankService(request.user)
                 result = service.sync_transactions(connection, days=days)
                 return Response(result)
-            
+
             elif source == 'pumb':
                 connection = BankConnection.objects.get(
                     user=request.user,
@@ -297,7 +298,7 @@ class SyncView(views.APIView):
                 service = PUMBService(connection.access_token)
                 result = service.sync_transactions(connection, days=days)
                 return Response(result)
-            
+
             elif source == 'binance':
                 exchange = CryptoExchange.objects.get(
                     user=request.user,
@@ -306,7 +307,7 @@ class SyncView(views.APIView):
                 service = BinanceService(exchange.api_key, exchange.api_secret)
                 result = service.sync_transactions(exchange, days=days)
                 return Response(result)
-            
+
             elif source == 'bybit':
                 exchange = CryptoExchange.objects.get(
                     user=request.user,
@@ -315,16 +316,17 @@ class SyncView(views.APIView):
                 service = BybitService(exchange.api_key, exchange.api_secret)
                 result = service.sync_transactions(exchange, days=days)
                 return Response(result)
-            
+
             elif source == 'okx':
                 exchange = CryptoExchange.objects.get(
                     user=request.user,
                     exchange_name='okx'
                 )
-                service = OKXService(exchange.api_key, exchange.api_secret, exchange.api_passphrase)
+                service = OKXService(
+                    exchange.api_key, exchange.api_secret, exchange.api_passphrase)
                 result = service.sync_transactions(exchange, days=days)
                 return Response(result)
-            
+
             else:
                 return Response(
                     {'error': 'Невідоме джерело'},
@@ -346,7 +348,7 @@ class SyncLogListView(generics.ListAPIView):
     """Список логів синхронізації"""
     serializer_class = SyncLogSerializer
     permission_classes = (IsAuthenticated,)
-    
+
     def get_queryset(self):
         return SyncLog.objects.filter(user=self.request.user)[:20]
 
@@ -355,7 +357,7 @@ class TransactionCategoryListView(generics.ListCreateAPIView):
     """Список категорій транзакцій"""
     serializer_class = TransactionCategorySerializer
     permission_classes = (IsAuthenticated,)
-    
+
     def get_queryset(self):
         return TransactionCategory.objects.all()
 
@@ -363,7 +365,7 @@ class TransactionCategoryListView(generics.ListCreateAPIView):
 class PUMBAuthInitView(views.APIView):
     """Ініціювати OAuth2 авторизацію ПУМБ"""
     permission_classes = (IsAuthenticated,)
-    
+
     @swagger_auto_schema(
         responses={
             200: openapi.Response(
@@ -379,22 +381,23 @@ class PUMBAuthInitView(views.APIView):
     def get(self, request):
         from django.conf import settings
         import secrets
-        
+
         # Генеруємо state для захисту від CSRF
         state = secrets.token_urlsafe(32)
         request.session['pumb_oauth_state'] = state
-        
+
         client_id = settings.PUMB_CLIENT_ID
         redirect_uri = settings.PUMB_REDIRECT_URI
-        
+
         if not client_id:
             return Response(
                 {'error': 'PUMB OAuth2 не налаштовано'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        auth_url = PUMBService.get_authorization_url(client_id, redirect_uri, state)
-        
+
+        auth_url = PUMBService.get_authorization_url(
+            client_id, redirect_uri, state)
+
         return Response({
             'authorization_url': auth_url
         })
@@ -403,11 +406,13 @@ class PUMBAuthInitView(views.APIView):
 class PUMBAuthCallbackView(views.APIView):
     """Callback для OAuth2 авторизації ПУМБ"""
     permission_classes = (IsAuthenticated,)
-    
+
     @swagger_auto_schema(
         manual_parameters=[
-            openapi.Parameter('code', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=True),
-            openapi.Parameter('state', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=True),
+            openapi.Parameter('code', openapi.IN_QUERY,
+                              type=openapi.TYPE_STRING, required=True),
+            openapi.Parameter('state', openapi.IN_QUERY,
+                              type=openapi.TYPE_STRING, required=True),
         ],
         responses={
             200: BankConnectionSerializer,
@@ -416,10 +421,10 @@ class PUMBAuthCallbackView(views.APIView):
     )
     def get(self, request):
         from django.conf import settings
-        
+
         code = request.query_params.get('code')
         state = request.query_params.get('state')
-        
+
         # Перевіряємо state
         stored_state = request.session.get('pumb_oauth_state')
         if not stored_state or stored_state != state:
@@ -427,7 +432,7 @@ class PUMBAuthCallbackView(views.APIView):
                 {'error': 'Невалідний state'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
             # Обмінюємо код на токен
             token_data = PUMBService.exchange_code_for_token(
@@ -436,7 +441,7 @@ class PUMBAuthCallbackView(views.APIView):
                 settings.PUMB_CLIENT_SECRET,
                 settings.PUMB_REDIRECT_URI
             )
-            
+
             # Зберігаємо підключення
             bank_connection, created = BankConnection.objects.update_or_create(
                 user=request.user,
@@ -447,15 +452,15 @@ class PUMBAuthCallbackView(views.APIView):
                     'status': 'active'
                 }
             )
-            
+
             # Очищаємо state з сесії
             del request.session['pumb_oauth_state']
-            
+
             return Response(
                 BankConnectionSerializer(bank_connection).data,
                 status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
             )
-            
+
         except Exception as e:
             return Response(
                 {'error': str(e)},
@@ -466,7 +471,7 @@ class PUMBAuthCallbackView(views.APIView):
 class ExchangeBalanceView(views.APIView):
     """Отримати баланс біржі"""
     permission_classes = (IsAuthenticated,)
-    
+
     @swagger_auto_schema(
         responses={
             200: "Баланс отримано",
@@ -475,23 +480,23 @@ class ExchangeBalanceView(views.APIView):
     )
     def get(self, request):
         exchange_name = request.query_params.get('exchange', 'bybit')
-        
+
         try:
             exchange = CryptoExchange.objects.get(
                 user=request.user,
                 exchange_name=exchange_name,
                 status='active'
             )
-            
+
             if exchange_name == 'bybit':
                 service = BybitService(exchange.api_key, exchange.api_secret)
                 balance = service.get_wallet_balance()
                 return Response(balance)
-            
+
             # Тут можна додати інші біржі
-            
+
             return Response({'error': 'Біржа не підтримується'}, status=status.HTTP_400_BAD_REQUEST)
-            
+
         except CryptoExchange.DoesNotExist:
             return Response(
                 {'error': 'Підключення не знайдено'},
@@ -504,7 +509,7 @@ class ExchangeBalanceView(views.APIView):
 class ExchangeOrdersView(views.APIView):
     """Отримати відкриті ордери"""
     permission_classes = (IsAuthenticated,)
-    
+
     @swagger_auto_schema(
         responses={
             200: "Ордери отримано",
@@ -516,30 +521,30 @@ class ExchangeOrdersView(views.APIView):
         category = request.query_params.get('category', 'spot')
         symbol = request.query_params.get('symbol')
         settle_coin = request.query_params.get('settleCoin')
-        
+
         try:
             exchange = CryptoExchange.objects.get(
                 user=request.user,
                 exchange_name=exchange_name,
                 status='active'
             )
-            
+
             if exchange_name == 'bybit':
                 service = BybitService(exchange.api_key, exchange.api_secret)
-                
+
                 # Для linear категорії потрібен settleCoin або symbol
                 if category == 'linear' and not symbol and not settle_coin:
                     settle_coin = 'USDT'
-                
+
                 orders = service.get_open_orders(
                     category=category,
                     symbol=symbol,
                     settleCoin=settle_coin
                 )
                 return Response(orders)
-            
+
             return Response({'error': 'Біржа не підтримується'}, status=status.HTTP_400_BAD_REQUEST)
-            
+
         except CryptoExchange.DoesNotExist:
             return Response(
                 {'error': 'Підключення не знайдено'},
@@ -552,7 +557,7 @@ class ExchangeOrdersView(views.APIView):
 class BankAnalyticsView(views.APIView):
     """Аналітика банківського рахунку"""
     permission_classes = (IsAuthenticated,)
-    
+
     def get(self, request):
         try:
             # Отримуємо транзакції користувача
@@ -561,29 +566,30 @@ class BankAnalyticsView(views.APIView):
                 bank_name='monobank',
                 status='active'
             ).first()
-            
+
             if not bank:
                 return Response({'error': 'Банк не підключено'}, status=status.HTTP_404_NOT_FOUND)
-            
+
             # Завантажуємо транзакції
-            transactions = MonobankService.get_transactions(bank.access_token, days=30)
-            
+            transactions = MonobankService.get_transactions(
+                bank.access_token, days=30)
+
             # Отримуємо реальний баланс з API
             client_info = MonobankService.get_client_info(bank.access_token)
-            
+
             # Рахуємо баланс всіх гривневих рахунків (код 980)
             # Баланс приходить в копійках, тому ділимо на 100
             balance = sum(
-                account['balance'] / 100 
-                for account in client_info.get('accounts', []) 
+                account['balance'] / 100
+                for account in client_info.get('accounts', [])
                 if account.get('currencyCode') == 980
             )
-            
+
             return Response({
                 'balance': balance,
                 'transactions': transactions
             })
-            
+
         except Exception as e:
             return Response(
                 {'error': str(e)},
@@ -622,7 +628,8 @@ def _get_uah_transactions(access_token: str, days: int = 30) -> list:
     """Транзакції тільки з основних UAH рахунків (без кредитних)"""
     try:
         balance, main_account_ids = _get_real_balance(access_token)
-        all_transactions = MonobankService.get_transactions(access_token, days=days)
+        all_transactions = MonobankService.get_transactions(
+            access_token, days=days)
 
         # Якщо є account_id — фільтруємо по основних рахунках
         if main_account_ids:
@@ -630,7 +637,8 @@ def _get_uah_transactions(access_token: str, days: int = 30) -> list:
                 t for t in all_transactions
                 if t.get('account_id') in main_account_ids
             ]
-            print(f"Filtered: {len(filtered)}/{len(all_transactions)} transactions")
+            print(
+                f"Filtered: {len(filtered)}/{len(all_transactions)} transactions")
             return filtered
 
         return all_transactions
@@ -642,19 +650,20 @@ def _get_uah_transactions(access_token: str, days: int = 30) -> list:
 class AIAnalystView(views.APIView):
     """AI Фінансовий Аналітик"""
     permission_classes = (IsAuthenticated,)
-    
+
     def post(self, request):
         question = request.data.get('question', None)
-        
+
         try:
             bank = BankConnection.objects.filter(
                 user=request.user, bank_name='monobank', status='active'
             ).first()
-            
+
             transactions = []
             if bank:
-                transactions = MonobankService.get_transactions(bank.access_token, days=30)
-            
+                transactions = MonobankService.get_transactions(
+                    bank.access_token, days=30)
+
             result = FinancialAnalystAgent.analyze(transactions, question)
             return Response(result)
         except Exception as e:
@@ -664,22 +673,25 @@ class AIAnalystView(views.APIView):
 class AIInvestmentView(views.APIView):
     """AI Інвестиційний Радник"""
     permission_classes = (IsAuthenticated,)
-    
+
     def get(self, request):
         try:
             bank = BankConnection.objects.filter(
                 user=request.user, bank_name='monobank', status='active'
             ).first()
-            
+
             transactions = []
             balance = 0.0
             if bank:
-                transactions = _get_uah_transactions(bank.access_token, days=30)
+                transactions = _get_uah_transactions(
+                    bank.access_token, days=30)
                 balance = _get_real_balance(bank.access_token)[0]
-            
-            income = sum(t['amount'] for t in transactions if t['type'] == 'income')
-            expenses = sum(t['amount'] for t in transactions if t['type'] == 'expense')
-            
+
+            income = sum(t['amount']
+                         for t in transactions if t['type'] == 'income')
+            expenses = sum(t['amount']
+                           for t in transactions if t['type'] == 'expense')
+
             bank_data = {
                 'balance': balance,
                 'income': income,
@@ -694,19 +706,20 @@ class AIInvestmentView(views.APIView):
 class AIForecastView(views.APIView):
     """AI Прогнозист"""
     permission_classes = (IsAuthenticated,)
-    
+
     def get(self, request):
         days = int(request.query_params.get('days', 30))
-        
+
         try:
             bank = BankConnection.objects.filter(
                 user=request.user, bank_name='monobank', status='active'
             ).first()
-            
+
             transactions = []
             if bank:
-                transactions = MonobankService.get_transactions(bank.access_token, days=30)
-            
+                transactions = MonobankService.get_transactions(
+                    bank.access_token, days=30)
+
             result = ForecastAgent.forecast(transactions, days)
             return Response(result)
         except Exception as e:
@@ -716,17 +729,18 @@ class AIForecastView(views.APIView):
 class AIAnomalyView(views.APIView):
     """AI Детектор Аномалій"""
     permission_classes = (IsAuthenticated,)
-    
+
     def get(self, request):
         try:
             bank = BankConnection.objects.filter(
                 user=request.user, bank_name='monobank', status='active'
             ).first()
-            
+
             transactions = []
             if bank:
-                transactions = MonobankService.get_transactions(bank.access_token, days=30)
-            
+                transactions = MonobankService.get_transactions(
+                    bank.access_token, days=30)
+
             result = AnomalyDetectorAgent.detect(transactions)
             return Response(result)
         except Exception as e:
@@ -736,32 +750,70 @@ class AIAnomalyView(views.APIView):
 class AIChatView(views.APIView):
     """AI Чат Асистент"""
     permission_classes = (IsAuthenticated,)
-    
+
     def post(self, request):
         message = request.data.get('message', '')
         history = request.data.get('history', [])  # історія з фронтенду
 
         if not message:
             return Response({'error': 'Повідомлення не може бути порожнім'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         try:
             bank = BankConnection.objects.filter(
                 user=request.user, bank_name='monobank', status='active'
             ).first()
-            
+
             context = {}
             if bank:
+                from datetime import datetime
+                import pytz
+
                 balance, _ = _get_real_balance(bank.access_token)
-                transactions = _get_uah_transactions(bank.access_token, days=30)
-                income = sum(t['amount'] for t in transactions if t['type'] == 'income')
-                expenses = sum(t['amount'] for t in transactions if t['type'] == 'expense')
+                # Беремо за 30 днів
+                transactions = _get_uah_transactions(
+                    bank.access_token, days=30)
+
+                # Фільтруємо транзакції лише за поточний місяць (як це робить фронтенд)
+                now = datetime.now()
+                # Робимо date-aware
+
+                current_month_income = 0
+                current_month_expenses = 0
+
+                for t in transactions:
+                    # '2026-04-14T10:00:00' -> datetime obj
+                    dt_str = t.get('transaction_date', '')
+                    if not dt_str:
+                        continue
+
+                    try:
+                        t_date = datetime.fromisoformat(dt_str)
+                        if t_date.year == now.year and t_date.month == now.month:
+                            if t['type'] == 'income':
+                                current_month_income += t['amount']
+                            elif t['type'] == 'expense':
+                                current_month_expenses += t['amount']
+                    except ValueError:
+                        pass
+
                 context = {
                     'balance': round(balance, 2),
-                    'income': round(income, 2),
-                    'expenses': round(expenses, 2)
+                    'income': round(current_month_income, 2),
+                    'expenses': round(current_month_expenses, 2),
+                    'month': now.strftime("%B %Y"),
+                    'recent_transactions': [
+                        {
+                            'date': t.get('transaction_date', '')[:10],
+                            'type': t.get('type'),
+                            'amount': round(t.get('amount', 0), 2),
+                            'desc': t.get('description', '')[:30]
+                        }
+                        for t in transactions[:150]
+                    ]
                 }
-                print(f"Chat context: {context}")
-            
+                print(
+                    f"Chat context keys: {list(context.keys())}, Transactions count: {len(context['recent_transactions'])}")
+
             result = ChatAgent.chat(message, context, history=history)
             return Response(result)
         except Exception as e:
