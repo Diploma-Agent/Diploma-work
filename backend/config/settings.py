@@ -27,7 +27,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-fi_61k&)n*s!(wnm++%1!0mxk7p=lskn$5@97y8g$f)y016q9=')
+SECRET_KEY = config(
+    'SECRET_KEY', default='django-insecure-fi_61k&)n*s!(wnm++%1!0mxk7p=lskn$5@97y8g$f)y016q9=')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
@@ -189,8 +190,10 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 # Celery Configuration
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+CELERY_BROKER_URL = config(
+    'CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config(
+    'CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -200,7 +203,8 @@ CELERY_ENABLE_UTC = True
 # PUMB OAuth2 Configuration (optional)
 PUMB_CLIENT_ID = config('PUMB_CLIENT_ID', default='')
 PUMB_CLIENT_SECRET = config('PUMB_CLIENT_SECRET', default='')
-PUMB_REDIRECT_URI = config('PUMB_REDIRECT_URI', default='http://localhost:8000/api/finance/pumb/callback')
+PUMB_REDIRECT_URI = config(
+    'PUMB_REDIRECT_URI', default='http://localhost:8000/api/finance/pumb/callback')
 
 # Google Vertex AI Credentials
 GOOGLE_CREDENTIALS = config('GOOGLE_CREDENTIALS', default='')
