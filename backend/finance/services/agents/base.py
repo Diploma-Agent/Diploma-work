@@ -1,5 +1,4 @@
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 import os
@@ -20,15 +19,11 @@ if not credentials_file or not os.path.exists(credentials_file):
 # Service Account credentials
 credentials = service_account.Credentials.from_service_account_file(
     credentials_file,
-    scopes=['https://www.googleapis.com/auth/cloud-platform']
+    scopes=['https://www.googleapis.com/auth/generative-language.retriever']
 )
 
-# Налаштовуємо Gemini з credentials (новий SDK)
-# Зверніть увагу: ми використовуємо `credentials`, якщо вони визначені,
-# але новий клієнт іншим способом передає їх в API або використовує APPLICATION_DEFAULT_CREDENTIALS.
-# Для genai.Client можна спробувати ініціалізацію з `credentials=credentials`
-# Якщо не підтримується, можливо доведеться встановити змінну середовища GOOGLE_APPLICATION_CREDENTIALS
-client = genai.Client(credentials=credentials)
+# Налаштовуємо Gemini з credentials (повернено на старий SDK для Service Account)
+genai.configure(credentials=credentials)
 
 MODELS = [
     'gemini-3-flash-preview',
@@ -41,37 +36,27 @@ MODEL = MODELS[0]
 
 
 def generate_with_retry(contents, config=None, max_retries=1, system_instruction=None, tools=None):
-    """Виклик Gemini API через Google Service Account Credentials (новий SDK `google-genai`)"""
+    """Виклик Gemini API через Google Service Account Credentials"""
     last_error = None
 
-    # Формуємо конфігурацію для нового SDK
-    gen_config_kwargs = {}
-    if config:
-        # Перенос старих параметрів (якщо вони були передані як dict)
-        if isinstance(config, dict):
-            # Наприклад, temperature, top_k
-            for k, v in config.items():
-                gen_config_kwargs[k] = v
-        else:
-            # Якщо config вже об'єкт старого GenerationConfig
-            pass  # треба адаптувати під ваші потреби
-
-    if system_instruction:
-        gen_config_kwargs['system_instruction'] = system_instruction
-    if tools:
-        gen_config_kwargs['tools'] = tools
-
-    # Створюємо об'єкт конфігурації
-    final_config = types.GenerateContentConfig(
-        **gen_config_kwargs) if gen_config_kwargs else None
+    # Формуємо конфігурацію
+    if config and isinstance(config, dict):
+        config = genai.types.GenerationConfig(**config)
 
     for model_name in MODELS:
         try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=contents,
-                config=final_config
+            model = genai.GenerativeModel(
+                model_name=model_name, 
+                system_instruction=system_instruction,
+                tools=tools
             )
+            
+            kwargs = {'contents': contents}
+            if config:
+                kwargs['generation_config'] = config
+                
+            response = model.generate_content(**kwargs)
+            
             if model_name != MODELS[0]:
                 print(f"[Gemini] Використано модель: {model_name}")
             return response
