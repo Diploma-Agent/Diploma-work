@@ -25,11 +25,10 @@ genai.configure(credentials=credentials)
 
 MODELS = [
     'gemini-3-flash-preview',
-    'gemini-2.5-flash-preview-05-20',
+    'gemini-3.1-flash-lite-preview',
+    'gemini-2.5-flash',
     'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash',
-    'gemini-pro'
+    'gemini-2.0-flash-lite'
 ]
 MODEL = MODELS[0]
 
@@ -74,6 +73,7 @@ def generate_with_retry(contents, config=None, max_retries=3, system_instruction
                         f"[Gemini] {model_name} — Rate limit. Спроба {attempt + 1}/{max_retries}.")
                     continue  # Пробуємо наступну модель відразу
                 elif 'not found' in error_str or '404' in error_str:
+                    print(f"[Gemini] Модель {model_name} не знайдена (404). Пропускаємо.")
                     continue  # Ця модель не існує, йдемо до наступної
                 else:
                     # Для інших помилок (таймаут, інше) логуємо і пробуємо знову

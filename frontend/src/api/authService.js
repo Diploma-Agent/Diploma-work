@@ -10,7 +10,7 @@ export const authService = {
 			body: JSON.stringify({
 				email: data.email,
 				password: data.password,
-				username: data.email  // використовуємо email як username
+				username: data.email 
 			}),
 		});
 
