@@ -598,6 +598,23 @@ class ExchangeOrdersView(views.APIView):
                 )
                 # Повертаємо об'єкт зі списком ордерів, щоб відповідати формат обробки на фронтенді (result.list або list)
                 return Response({'list': orders})
+            elif exchange_name == 'binance':
+                service = BinanceService(exchange.api_key, exchange.api_secret)
+                raw_orders = service.get_open_orders(
+                    category=category,
+                    symbol=symbol
+                )
+                formatted_orders = []
+                for ord in raw_orders:
+                    formatted_orders.append({
+                        'orderId': ord.get('orderId'),
+                        'symbol': ord.get('symbol'),
+                        'side': ord.get('side'),
+                        'price': ord.get('price'),
+                        'qty': ord.get('origQty'),
+                        'orderStatus': ord.get('status')
+                    })
+                return Response({'list': formatted_orders})
 
             return Response({'error': 'Біржа не підтримується'}, status=status.HTTP_400_BAD_REQUEST)
 

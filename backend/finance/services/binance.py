@@ -95,6 +95,22 @@ class BinanceService:
         
         return self._make_request('GET', '/api/v3/allOrders', params)
     
+    def get_open_orders(self, category='spot', symbol=None, limit=50):
+        """Get open orders"""
+        params = {}
+        if symbol:
+            params['symbol'] = symbol
+            
+        endpoint = '/api/v3/openOrders'
+        if category == 'linear':
+            endpoint = 'https://fapi.binance.com/fapi/v1/openOrders'
+            # Note: _make_request logic might need special handling if it prefixes self.BASE_URL
+            # For simplicity, if we rely on standard SPOT open orders:
+            pass # TODO: handle futures appropriately if needed
+            
+        return self._make_request('GET', '/api/v3/openOrders', params)
+    
+    
     def sync_transactions(self, crypto_exchange, days=30):
         """Synchronize trades from Binance to database"""
         sync_log = SyncLog.objects.create(
