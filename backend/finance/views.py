@@ -3,6 +3,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+import traceback
+import secrets
+import pytz
+from datetime import datetime
+from django.conf import settings
 
 from .models import (
     BankConnection, CryptoExchange, Transaction,
@@ -246,6 +251,7 @@ class TransactionListView(views.APIView):
             return Response(all_transactions)
 
         except Exception as e:
+            traceback.print_exc()
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
@@ -379,15 +385,12 @@ class PUMBAuthInitView(views.APIView):
         }
     )
     def get(self, request):
-        from django.conf import settings
-        import secrets
-
         # Генеруємо state для захисту від CSRF
         state = secrets.token_urlsafe(32)
         request.session['pumb_oauth_state'] = state
 
-        client_id = settings.PUMB_CLIENT_ID
-        redirect_uri = settings.PUMB_REDIRECT_URI
+        client_id = getattr(settings, 'PUMB_CLIENT_ID', None)
+        redirect_uri = getattr(settings, 'PUMB_REDIRECT_URI', None)
 
         if not client_id:
             return Response(
@@ -420,8 +423,6 @@ class PUMBAuthCallbackView(views.APIView):
         }
     )
     def get(self, request):
-        from django.conf import settings
-
         code = request.query_params.get('code')
         state = request.query_params.get('state')
 
@@ -765,9 +766,6 @@ class AIChatView(views.APIView):
 
             context = {}
             if bank:
-                from datetime import datetime
-                import pytz
-
                 balance, _ = _get_real_balance(bank.access_token)
                 # Беремо за 30 днів
                 transactions = _get_uah_transactions(

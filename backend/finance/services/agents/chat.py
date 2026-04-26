@@ -1,5 +1,6 @@
 from .base import generate_with_retry
 import requests
+import json
 
 
 def get_crypto_price(symbol: str) -> str:
@@ -9,7 +10,7 @@ def get_crypto_price(symbol: str) -> str:
     """
     try:
         url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol.upper()}USDT"
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             return f"Ціна {symbol.upper()} на Binance становить {float(data['price']):.2f} USDT."
@@ -48,7 +49,6 @@ class ChatAgent:
         context_text = ""
         # Ми додаємо контекст завжди, щоб Gemini знав, які суми є
         if context:
-            import json
             tx_data = context.get('recent_transactions', [])
             tx_json = json.dumps(
                 tx_data, ensure_ascii=False) if tx_data else "[]"
