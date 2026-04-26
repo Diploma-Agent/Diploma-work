@@ -49,7 +49,7 @@ const TokensTab = () => {
             const token = localStorage.getItem('token');
             await financeService.addExchange(token, tokenForm);
             
-            setTokenForm({ exchange: 'binance', apiKey: '', apiSecret: '', name: '' });
+            setTokenForm({ exchange: 'binance', apiKey: '', apiSecret: '', name: '', passphrase: '' });
             setShowAddToken(false);
             setSuccess('Токен біржі успішно додано!');
             loadTokens();
@@ -175,10 +175,26 @@ const TokensTab = () => {
                             onChange={onTokenChange}
                             required
                         />
-                        <small className="input-hint">
-                            <em>Примітка:</em> Ваші API ключі зберігаються у зашифрованому вигляді і не відображаються повністю для безпеки.
-                        </small>
                     </label>
+
+                    {tokenForm.exchange === 'okx' && (
+                        <label className="profile-label">
+                            <span>Passphrase (Парольна фраза)</span>
+                            <input
+                                className="profile-input"
+                                name="passphrase"
+                                type="password"
+                                placeholder="Введіть Passphrase для OKX"
+                                value={tokenForm.passphrase || ''}
+                                onChange={onTokenChange}
+                                required
+                            />
+                        </label>
+                    )}
+
+                    <small className="input-hint" style={{display: 'block', marginTop: '10px', marginBottom: '15px'}}>
+                        <em>Примітка:</em> Ваші API ключі зберігаються у зашифрованому вигляді і не відображаються повністю для безпеки.
+                    </small>
 
                     <button type="submit" className="profile-button profile-button--save" disabled={loading}>
                         {loading ? 'Збереження...' : 'Зберегти ключ'}

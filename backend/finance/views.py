@@ -493,6 +493,53 @@ class ExchangeBalanceView(views.APIView):
                 service = BybitService(exchange.api_key, exchange.api_secret)
                 balance = service.get_wallet_balance()
                 return Response(balance)
+            elif exchange_name == 'okx':
+                service = OKXService(exchange.api_key, exchange.api_secret, exchange.api_passphrase)
+                raw_balance = service.get_account_balance()
+                
+                # Форматуємо відповідь зі структури OKX до структури, що очікується на клієнті (як у Bybit)
+                if raw_balance and len(raw_balance) > 0:
+                    data = raw_balance[0]
+                    coins = []
+                    for d in data.get('details', []):
+                        coins.append({
+                            'coin': d.get('ccy', ''),
+                            'walletBalance': d.get('eq', '0'),
+                            'usdValue': d.get('eqUsd', '0')
+                        })
+                    formatted = {
+                        'list': [{
+                            'totalEquity': data.get('totalEq', '0'),
+                            'coin': coins
+                        }]
+                    }
+                else:
+                    formatted = {'list': [{'totalEquity': '0', 'coin': []}]}
+                
+                return Response(formatted)
+            elif exchange_name == 'binance':
+                service = BinanceService(exchange.api_key, exchange.api_secret)
+                raw_balance = service.get_balances()
+                
+                # Аналогічно формуємо дані для Binance
+                coins = []
+                for b in raw_balance:
+                    free = float(b.get('free', 0))
+                    locked = float(b.get('locked', 0))
+                    bal = free + locked
+                    if bal > 0:
+                        coins.append({
+                            'coin': b.get('asset', ''),
+                            'walletBalance': str(bal),
+                            'usdValue': '0' # Binance get_balances не повертає usdValue
+                        })
+                formatted = {
+                    'list': [{
+                        'totalEquity': '0',
+                        'coin': coins
+                    }]
+                }
+                return Response(formatted)
 
             # Тут можна додати інші біржі
 
@@ -543,6 +590,14 @@ class ExchangeOrdersView(views.APIView):
                     settleCoin=settle_coin
                 )
                 return Response(orders)
+            elif exchange_name == 'okx':
+                service = OKXService(exchange.api_key, exchange.api_secret, exchange.api_passphrase)
+                orders = service.get_open_orders(
+                    category=category,
+                    symbol=symbol
+                )
+                # Повертаємо об'єкт зі списком ордерів, щоб відповідати формат обробки на фронтенді (result.list або list)
+                return Response({'list': orders})
 
             return Response({'error': 'Біржа не підтримується'}, status=status.HTTP_400_BAD_REQUEST)
 

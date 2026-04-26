@@ -59,10 +59,11 @@ class OKXService:
         }
         
         try:
+            full_url = f"{self.BASE_URL}{endpoint}"
             if method == 'GET':
-                response = requests.get(url, headers=headers)
+                response = requests.get(full_url, headers=headers)
             elif method == 'POST':
-                response = requests.post(url, headers=headers, data=body)
+                response = requests.post(full_url, headers=headers, data=body)
             
             response.raise_for_status()
             data = response.json()
@@ -86,6 +87,25 @@ class OKXService:
             'limit': limit
         }
         return self._make_request('GET', '/api/v5/account/bills', params)
+    
+    def get_open_orders(self, category='spot', symbol=None, limit=50):
+        """Get pending orders"""
+        inst_type_map = {
+            'spot': 'SPOT',
+            'linear': 'SWAP',
+            'inverse': 'SWAP',
+            'option': 'OPTION'
+        }
+        inst_type = inst_type_map.get(category.lower(), 'SPOT')
+        
+        params = {
+            'instType': inst_type,
+            'limit': limit
+        }
+        if symbol:
+            params['instId'] = symbol
+            
+        return self._make_request('GET', '/api/v5/trade/orders-pending', params)
     
     def get_fills_history(self, inst_type='SPOT', limit=100):
         """Get fills (executed orders) history"""

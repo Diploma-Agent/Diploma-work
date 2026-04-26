@@ -70,17 +70,22 @@ export const financeService = {
 	},
 
 	async addExchange(token, data) {
+		const body = {
+			exchange_name: data.exchange,
+			api_key: data.apiKey,
+			api_secret: data.apiSecret,
+		};
+		if (data.exchange === 'okx' && data.passphrase) {
+			body.api_passphrase = data.passphrase;
+		}
+
 		const response = await fetch(`${API_URL}/exchanges/add/`, {
 			method: 'POST',
 			headers: {
 				'Authorization': `Bearer ${token}`,
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify({
-				exchange_name: data.exchange,
-				api_key: data.apiKey,
-				api_secret: data.apiSecret,
-			}),
+			body: JSON.stringify(body),
 		});
 
 		if (!response.ok) {
