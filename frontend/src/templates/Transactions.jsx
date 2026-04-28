@@ -93,14 +93,14 @@ function Transactions() {
 
 	const handleAddTransaction = async (e) => {
 		e.preventDefault();
-		
 		try {
 			const token = localStorage.getItem('token');
-			const response = await fetch('http://localhost:8000/api/finance/transactions/', {
+			const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+			const response = await fetch(`${API_BASE}/finance/transactions/`, {
 				method: 'POST',
 				headers: {
 					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
 					type: newTransaction.type,
@@ -108,23 +108,14 @@ function Transactions() {
 					currency: newTransaction.currency,
 					description: newTransaction.description,
 					transaction_date: new Date(newTransaction.date).toISOString(),
-					source: 'manual'
-				})
+					source: 'manual',
+				}),
 			});
 
-			if (!response.ok) {
-				throw new Error('Помилка додавання транзакції');
-			}
+			if (!response.ok) throw new Error('Помилка додавання транзакції');
 
 			setShowAddModal(false);
-			setNewTransaction({
-				type: 'expense',
-				amount: '',
-				currency: 'UAH',
-				description: '',
-				date: new Date().toISOString().split('T')[0],
-			});
-			
+			setNewTransaction({ type: 'expense', amount: '', currency: 'UAH', description: '', date: new Date().toISOString().split('T')[0] });
 			fetchTransactions();
 		} catch (err) {
 			setError(err.message);
@@ -264,41 +255,45 @@ function Transactions() {
 								</p>
 							</div>
 						) : (
-							filteredTransactions.map(transaction => (
-								<div key={transaction.id} className={`transaction-card transaction-${transaction.type}`}>
-									<div className="transaction-icon">
-										{getTransactionIcon(transaction.type)}
-									</div>
-									<div className="transaction-details">
-										<div className="transaction-main">
-											<h3 className="transaction-description">{transaction.description}</h3>
-											<span className="transaction-amount">
-												{transaction.type === 'income' ? '+' : '-'}
-												{transaction.amount} {transaction.currency}
-											</span>
+							filteredTransactions.map(transaction => {
+								const isTransfer = transaction.type === 'transfer';
+								const sign = transaction.type === 'income' ? '+' : (isTransfer ? '↔' : '−');
+								const amountClass = transaction.type === 'income'
+									? 'amount-positive'
+									: isTransfer ? 'amount-neutral' : 'amount-negative';
+								const d = transaction.transaction_date;
+								const parsedDate = d ? new Date(d) : null;
+								const dateStr = parsedDate && !isNaN(parsedDate)
+									? parsedDate.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+									: '—';
+
+								return (
+									<div key={transaction.id} className={`transaction-card transaction-${transaction.type}`}>
+										<div className="transaction-icon">
+											{getTransactionIcon(transaction.type)}
 										</div>
-										<div className="transaction-meta">
-											<span className="transaction-source">
-												{getSourceIcon(transaction.source)} {transaction.source}
-											</span>
-											{transaction.counterparty && (
-												<span className="transaction-counterparty">
-													→ {transaction.counterparty}
+										<div className="transaction-details">
+											<div className="transaction-main">
+												<h3 className="transaction-description">{transaction.description || '—'}</h3>
+												<span className={`transaction-amount ${amountClass}`}>
+													{sign}{Math.abs(transaction.amount || 0).toLocaleString('uk-UA')} {transaction.currency || '₴'}
 												</span>
-											)}
-											<span className="transaction-date">
-												{new Date(transaction.transaction_date).toLocaleDateString('uk-UA', {
-													day: '2-digit',
-													month: '2-digit',
-													year: 'numeric',
-													hour: '2-digit',
-													minute: '2-digit'
-												})}
-											</span>
+											</div>
+											<div className="transaction-meta">
+												<span className="transaction-source">
+													{getSourceIcon(transaction.source)} {transaction.source}
+												</span>
+												{transaction.counterparty && (
+													<span className="transaction-counterparty">
+														→ {transaction.counterparty}
+													</span>
+												)}
+												<span className="transaction-date">{dateStr}</span>
+											</div>
 										</div>
 									</div>
-								</div>
-							))
+								);
+							})
 						)}
 					</div>
 				</div>

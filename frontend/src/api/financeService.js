@@ -159,6 +159,23 @@ export const financeService = {
 		return response.json();
 	},
 
+	async getChatHistory(token, limit = 50) {
+		const response = await fetch(`${API_URL}/ai/chat/history/?limit=${limit}`, {
+			headers: { 'Authorization': `Bearer ${token}` },
+		});
+		if (!response.ok) throw new Error('Помилка завантаження історії чату');
+		return response.json();
+	},
+
+	async clearChatHistory(token) {
+		const response = await fetch(`${API_URL}/ai/chat/history/`, {
+			method: 'DELETE',
+			headers: { 'Authorization': `Bearer ${token}` },
+		});
+		if (!response.ok) throw new Error('Помилка очищення історії чату');
+		return response.json();
+	},
+
 	async aiAnalyst(token, question = null) {
 		const response = await fetch(`${API_URL}/ai/analyst/`, {
 			method: 'POST',

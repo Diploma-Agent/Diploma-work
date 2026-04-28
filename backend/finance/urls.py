@@ -5,7 +5,8 @@ from .views import (
     TransactionListView, SyncView, SyncLogListView, TransactionCategoryListView,
     PUMBAuthInitView, PUMBAuthCallbackView,
     ExchangeBalanceView, ExchangeOrdersView, BankAnalyticsView,
-    AIAnalystView, AIInvestmentView, AIForecastView, AIAnomalyView, AIChatView
+    AIAnalystView, AIInvestmentView, AIForecastView, AIAnomalyView, AIChatView,
+    ChatHistoryView
 )
 
 app_name = 'finance'
@@ -48,4 +49,5 @@ urlpatterns = [
     path('ai/forecast/', AIForecastView.as_view(), name='ai_forecast'),
     path('ai/anomaly/', AIAnomalyView.as_view(), name='ai_anomaly'),
     path('ai/chat/', AIChatView.as_view(), name='ai_chat'),
+    path('ai/chat/history/', ChatHistoryView.as_view(), name='ai_chat_history'),
 ]

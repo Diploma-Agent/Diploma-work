@@ -385,3 +385,16 @@
 }
 .tx-item.tx-expense .tx-amount { color: #ef4444; }
 .tx-item.tx-income .tx-amount { color: #10b981; }
+.tx-item.tx-transfer .tx-amount { color: #94a3b8; }
+.tx-amount.neutral { color: #94a3b8; }
+
+.loading-inline {
+	color: #94a3b8;
+	font-size: 0.9rem;
+	animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
+}

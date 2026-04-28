@@ -11,7 +11,7 @@ from django.conf import settings
 
 from .models import (
     BankConnection, CryptoExchange, Transaction,
-    TransactionCategory, FinancialForecast, SyncLog
+    TransactionCategory, FinancialForecast, SyncLog, ChatMessage
 )
 from .serializers import (
     BankConnectionSerializer, AddBankConnectionSerializer,
@@ -633,7 +633,6 @@ class BankAnalyticsView(views.APIView):
 
     def get(self, request):
         try:
-            # Отримуємо транзакції користувача
             bank = BankConnection.objects.filter(
                 user=request.user,
                 bank_name='monobank',
@@ -643,20 +642,11 @@ class BankAnalyticsView(views.APIView):
             if not bank:
                 return Response({'error': 'Банк не підключено'}, status=status.HTTP_404_NOT_FOUND)
 
-            # Завантажуємо транзакції
-            transactions = MonobankService.get_transactions(
-                bank.access_token, days=30)
+            # Баланс тільки основних рахунків (без накопичувальних/кредитних)
+            balance, _ = _get_real_balance(bank.access_token)
 
-            # Отримуємо реальний баланс з API
-            client_info = MonobankService.get_client_info(bank.access_token)
-
-            # Рахуємо баланс всіх гривневих рахунків (код 980)
-            # Баланс приходить в копійках, тому ділимо на 100
-            balance = sum(
-                account['balance'] / 100
-                for account in client_info.get('accounts', [])
-                if account.get('currencyCode') == 980
-            )
+            # Транзакції тільки з основних UAH-рахунків, без внутрішніх переказів
+            transactions = _get_uah_transactions(bank.access_token, days=30)
 
             return Response({
                 'balance': balance,
@@ -734,8 +724,7 @@ class AIAnalystView(views.APIView):
 
             transactions = []
             if bank:
-                transactions = MonobankService.get_transactions(
-                    bank.access_token, days=30)
+                transactions = _get_uah_transactions(bank.access_token, days=30)
 
             result = FinancialAnalystAgent.analyze(transactions, question)
             return Response(result)
@@ -790,8 +779,7 @@ class AIForecastView(views.APIView):
 
             transactions = []
             if bank:
-                transactions = MonobankService.get_transactions(
-                    bank.access_token, days=30)
+                transactions = _get_uah_transactions(bank.access_token, days=30)
 
             result = ForecastAgent.forecast(transactions, days)
             return Response(result)
@@ -811,8 +799,7 @@ class AIAnomalyView(views.APIView):
 
             transactions = []
             if bank:
-                transactions = MonobankService.get_transactions(
-                    bank.access_token, days=30)
+                transactions = _get_uah_transactions(bank.access_token, days=30)
 
             result = AnomalyDetectorAgent.detect(transactions)
             return Response(result)
@@ -821,12 +808,11 @@ class AIAnomalyView(views.APIView):
 
 
 class AIChatView(views.APIView):
-    """AI Чат Асистент"""
+    """AI Чат Асистент з персистентною історією в БД"""
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
         message = request.data.get('message', '')
-        history = request.data.get('history', [])  # історія з фронтенду
 
         if not message:
             return Response({'error': 'Повідомлення не може бути порожнім'}, status=status.HTTP_400_BAD_REQUEST)
@@ -839,23 +825,19 @@ class AIChatView(views.APIView):
             context = {}
             if bank:
                 balance, _ = _get_real_balance(bank.access_token)
-                # Беремо за 30 днів
-                transactions = _get_uah_transactions(
-                    bank.access_token, days=30)
+                transactions = _get_uah_transactions(bank.access_token, days=30)
 
-                # Фільтруємо транзакції лише за поточний місяць (як це робить фронтенд)
                 now = datetime.now()
-                # Робимо date-aware
-
                 current_month_income = 0
                 current_month_expenses = 0
 
                 for t in transactions:
-                    # '2026-04-14T10:00:00' -> datetime obj
+                    # Внутрішні перекази між рахунками не враховуємо
+                    if t.get('type') == 'transfer':
+                        continue
                     dt_str = t.get('transaction_date', '')
                     if not dt_str:
                         continue
-
                     try:
                         t_date = datetime.fromisoformat(dt_str)
                         if t_date.year == now.year and t_date.month == now.month:
@@ -881,10 +863,46 @@ class AIChatView(views.APIView):
                         for t in transactions[:150]
                     ]
                 }
-                print(
-                    f"Chat context keys: {list(context.keys())}, Transactions count: {len(context['recent_transactions'])}")
 
-            result = ChatAgent.chat(message, context, history=history)
+            # Завантажуємо останні 10 повідомлень з БД як контекст для агента
+            db_history = list(
+                ChatMessage.objects.filter(user=request.user)
+                .order_by('-created_at')[:10]
+                .values('role', 'text')
+            )
+            db_history.reverse()  # хронологічний порядок
+
+            result = ChatAgent.chat(message, context, history=db_history)
+
+            # Зберігаємо повідомлення користувача та відповідь агента в БД
+            ChatMessage.objects.create(user=request.user, role='user', text=message)
+            ChatMessage.objects.create(
+                user=request.user,
+                role='model',
+                text=result.get('response', ''),
+                agent=result.get('agent', '')
+            )
+
             return Response(result)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChatHistoryView(views.APIView):
+    """Отримати збережену історію чату користувача"""
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        limit = int(request.query_params.get('limit', 50))
+        messages = (
+            ChatMessage.objects.filter(user=request.user)
+            .order_by('-created_at')[:limit]
+            .values('role', 'text', 'agent', 'created_at')
+        )
+        history = list(reversed(list(messages)))
+        return Response({'history': history})
+
+    def delete(self, request):
+        """Очистити всю історію чату"""
+        ChatMessage.objects.filter(user=request.user).delete()
+        return Response({'status': 'Історію чату очищено'})

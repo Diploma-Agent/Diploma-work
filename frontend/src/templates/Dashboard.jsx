@@ -5,139 +5,63 @@ import { authService } from '../api/authService';
 import { financeService } from '../api/financeService';
 import '../styles/dashboardStyles.css';
 
+function calcMonthStats(txList) {
+	const now = new Date();
+	let income = 0;
+	let expense = 0;
+	txList.forEach(t => {
+		if (t.type === 'transfer') return;
+		const d = t.transaction_date || t.date || t.time;
+		const parsed = d ? new Date(d) : null;
+		if (!parsed || isNaN(parsed.getTime())) return;
+		if (parsed.getMonth() !== now.getMonth() || parsed.getFullYear() !== now.getFullYear()) return;
+		const amount = parseFloat(t.amount) || 0;
+		if (t.type === 'income') income += amount;
+		else if (t.type === 'expense') expense += Math.abs(amount);
+	});
+	return { income, expense };
+}
+
 function Dashboard() {
 	const navigate = useNavigate();
 	const [userName, setUserName] = useState('');
-	const [loading, setLoading] = useState(true);
-
-	// Mock or state data
-	const [balance, setBalance] = useState({ total: 0, currency: '₴', trend: '+0%' });
-	const [stats, setStats] = useState({ income: 0, expense: 0 });
+	const [balance, setBalance] = useState(null);
+	const [stats, setStats] = useState(null);
 	const [transactions, setTransactions] = useState([]);
-	const [aiInsight, setAiInsight] = useState('');
+	const [loadingBalance, setLoadingBalance] = useState(true);
+	const [loadingTx, setLoadingTx] = useState(true);
 
 	useEffect(() => {
-		const initDashboard = async () => {
-			const token = localStorage.getItem('token');
-			if (!token) {
-				navigate('/login');
-				return;
-			}
+		const token = localStorage.getItem('token');
+		if (!token) { navigate('/login'); return; }
 
-			try {
-				// Get User
-				const savedUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
-				if (savedUser.first_name) setUserName(savedUser.first_name);
+		// Ім'я з кешу, потім з API
+		const saved = JSON.parse(localStorage.getItem('user_profile') || '{}');
+		if (saved.first_name) setUserName(saved.first_name);
+		authService.getMe(token)
+			.then(u => setUserName(u.first_name || u.username || 'Користувачу'))
+			.catch(() => {});
 
-				try {
-					const userData = await authService.getMe(token);
-					setUserName(userData.first_name || userData.username || 'Користувачу');
-				} catch (e) {
-					console.error('Помилка завантаження профілю:', e);
-				}
+		// Баланс
+		financeService.getBankAnalytics(token)
+			.then(res => {
+				if (res) setBalance(res.balance ?? res.total_balance ?? 0);
+			})
+			.catch(() => setBalance(0))
+			.finally(() => setLoadingBalance(false));
 
-				// Get Analytics & Transactions & AI insights parameters asynchronously and individually
-				// to avoid blocking the whole page load on one endpoint.
-				const fetchAnalytics = async () => {
-					try {
-						const res = await financeService.getBankAnalytics(token);
-						if (res) {
-							// We let fetchTx handle income/expense to calculate cleanly.
-							// Not reading from analytics summary to avoid conflict with pure month.
-							setBalance({
-								total: res.balance ?? res.total_balance ?? res.summary?.balance ?? 0,
-								currency: '₴',
-								trend: '+0%' // Keep mock or update if backend provides
-							});
-						}
-					} catch (e) {
-						console.error('Помилка завантаження банківської аналітики:', e);
-					}
-				};
-
-				const fetchTx = async () => {
-					try {
-						// Беремо 31 день, щоб точно охопити поточний місяць
-						const res = await financeService.getTransactions(token, 'all', 31);
-						if (res && Array.isArray(res)) {
-							// Calculate stats from ALL transactions for the CURRENT MONTH explicitly
-							let calcIncome = 0;
-							let calcExpense = 0;
-
-							const now = new Date();
-							const currentMonth = now.getMonth();
-							const currentYear = now.getFullYear();
-
-							res.forEach(t => {
-								const txDateInfo = t.transaction_date || t.date || t.time;
-								const parsedDate = txDateInfo ? new Date(txDateInfo) : null;
-
-								if (parsedDate && parsedDate.getMonth() === currentMonth && parsedDate.getFullYear() === currentYear) {
-									const amount = parseFloat(t.amount) || 0;
-									if (t.type === 'income') calcIncome += amount;
-									else if (t.type === 'expense') calcExpense += Math.abs(amount);
-									else if (amount > 0) calcIncome += amount;
-									else calcExpense += Math.abs(amount);
-								}
-							});
-
-							// Only update if we didn't receive pre-calculated ones or to override
-							setStats({
-								income: calcIncome,
-								expense: calcExpense
-							});
-
-							setTransactions(res.slice(0, 5));
-						} else if (res && Array.isArray(res.transactions)) {
-							let calcIncome = 0;
-							let calcExpense = 0;
-
-							const now = new Date();
-							const currentMonth = now.getMonth();
-							const currentYear = now.getFullYear();
-
-							res.transactions.forEach(t => {
-								const txDateInfo = t.transaction_date || t.date || t.time;
-								const parsedDate = txDateInfo ? new Date(txDateInfo) : null;
-
-								if (parsedDate && parsedDate.getMonth() === currentMonth && parsedDate.getFullYear() === currentYear) {
-									const amount = parseFloat(t.amount) || 0;
-									if (t.type === 'income') calcIncome += amount;
-									else if (t.type === 'expense') calcExpense += Math.abs(amount);
-									else if (amount > 0) calcIncome += amount;
-									else calcExpense += Math.abs(amount);
-								}
-							});
-
-							setStats({
-								income: calcIncome,
-								expense: calcExpense
-							});
-
-							setTransactions(res.transactions.slice(0, 5));
-						}
-					} catch (e) {
-						console.error('Помилка завантаження транзакцій:', e);
-					}
-				};
-
-				// Fire requests in parallel without await all (to let components update as data arrives)
-				fetchAnalytics();
-				fetchTx();
-
-				// Keep AI static or add an independent fetch if needed 
-				setAiInsight("Ваші фінанси синхронізовано. Слідкуйте за витратами на розваги в цьому місяці.");
-
-			} catch (generalError) {
-				console.error('Критична помилка ініціалізації дашборду:', generalError);
-			} finally {
-				// We drop loading early so UI can render the shell quickly
-				setLoading(false);
-			}
-		};
-
-		initDashboard();
+		// Транзакції + статистика
+		financeService.getTransactions(token, 'all', 31)
+			.then(res => {
+				const list = Array.isArray(res) ? res : (Array.isArray(res?.transactions) ? res.transactions : []);
+				setStats(calcMonthStats(list));
+				setTransactions(list.slice(0, 5));
+			})
+			.catch(() => setStats({ income: 0, expense: 0 }))
+			.finally(() => setLoadingTx(false));
 	}, [navigate]);
+
+	const fmt = (n) => (Number(n) || 0).toLocaleString('uk-UA');
 
 	return (
 		<div className="dashboard-wrapper">
@@ -151,63 +75,73 @@ function Dashboard() {
 						<p className="dashboard-subtitle">Ось ваш фінансовий зріз на сьогодні</p>
 					</div>
 
-					{/* Верхній блок: Баланс */}
+					{/* Баланс + статистика */}
 					<div className="dashboard-summary-section">
 						<div className="dashboard-total-card">
 							<h2>Загальний баланс</h2>
 							<div className="balance-info">
-								<h1 className="balance-amount">{(Number(balance.total) || 0).toLocaleString('uk-UA')} {balance.currency}</h1>
-								{/* Placeholder for trend */}
-								<span className="balance-trend positive">📈 +0 (за місяць)</span>
+								{loadingBalance
+									? <p className="loading-inline">Завантаження...</p>
+									: <h1 className="balance-amount">{fmt(balance)} ₴</h1>
+								}
 							</div>
 						</div>
 
 						<div className="dashboard-quick-stats">
 							<div className="stat-card income">
-								<span className="stat-icon">⬇️</span>
+								<span className="stat-icon">⬆️</span>
 								<div>
 									<div className="stat-label">Доходи за місяць</div>
-									<div className="stat-value">{(Number(stats.income) || 0).toLocaleString('uk-UA')} ₴</div>
+									{loadingTx
+										? <div className="stat-value loading-inline">...</div>
+										: <div className="stat-value">{fmt(stats?.income)} ₴</div>
+									}
 								</div>
 							</div>
 							<div className="stat-card expense">
-								<span className="stat-icon">⬆️</span>
+								<span className="stat-icon">⬇️</span>
 								<div>
 									<div className="stat-label">Витрати за місяць</div>
-									<div className="stat-value">{(Number(stats.expense) || 0).toLocaleString('uk-UA')} ₴</div>
+									{loadingTx
+										? <div className="stat-value loading-inline">...</div>
+										: <div className="stat-value">{fmt(stats?.expense)} ₴</div>
+									}
 								</div>
 							</div>
 						</div>
 					</div>
 
 					<div className="dashboard-grid-2-col">
-						{/* Ліва колонка: Останні транзакції */}
+						{/* Останні транзакції */}
 						<div className="dashboard-widget recent-transactions">
 							<div className="widget-header">
 								<h3>💳 Останні транзакції</h3>
-								<Link to="/transactions" className="widget-link">Всі транзакції &rarr;</Link>
+								<Link to="/transactions" className="widget-link">Всі транзакції →</Link>
 							</div>
 
 							<div className="transaction-list">
-								{loading && <p>Завантаження...</p>}
-								{!loading && transactions.length === 0 && (
-									<p className="no-data-text">Транзакції відсутні або ще не синхронізовані.</p>
+								{loadingTx && <p>Завантаження...</p>}
+								{!loadingTx && transactions.length === 0 && (
+									<p className="no-data-text">
+										Транзакції відсутні. Підключіть банк у <Link to="/profile">налаштуваннях</Link>.
+									</p>
 								)}
-								{!loading && transactions.map((tx, idx) => {
-									const txDate = tx.transaction_date || tx.date || tx.time;
-									const parsedDate = txDate ? new Date(txDate) : null;
-									const formattedDate = parsedDate && !isNaN(parsedDate.getTime())
-										? parsedDate.toLocaleDateString('uk-UA')
-										: 'Невідома дата';
+								{!loadingTx && transactions.map((tx, idx) => {
+									const d = tx.transaction_date || tx.date || tx.time;
+									const parsed = d ? new Date(d) : null;
+									const dateStr = parsed && !isNaN(parsed) ? parsed.toLocaleDateString('uk-UA') : '—';
+									const isTransfer = tx.type === 'transfer';
+									const sign = tx.type === 'income' ? '+' : (isTransfer ? '↔' : '−');
+									const amountClass = tx.type === 'income' ? 'positive' : (isTransfer ? 'neutral' : 'negative');
 
 									return (
 										<div key={idx} className={`tx-item tx-${tx.type || 'default'}`}>
 											<div className="tx-info">
-												<span className="tx-desc">{tx.description || tx.type || 'Транзакція'}</span>
-												<span className="tx-date">{formattedDate}</span>
+												<span className="tx-desc">{tx.description || 'Транзакція'}</span>
+												<span className="tx-date">{dateStr}</span>
 											</div>
-											<span className={`tx-amount ${tx.type === 'expense' || tx.amount < 0 ? 'negative' : 'positive'}`}>
-												{tx.type === 'income' ? '+' : (tx.type === 'expense' ? '-' : ((tx.amount || 0) > 0 ? '+' : '-'))}{Math.abs(tx.amount || 0)} {tx.currency || '₴'}
+											<span className={`tx-amount ${amountClass}`}>
+												{sign}{Math.abs(tx.amount || 0).toLocaleString('uk-UA')} {tx.currency || '₴'}
 											</span>
 										</div>
 									);
@@ -215,14 +149,14 @@ function Dashboard() {
 							</div>
 						</div>
 
-						{/* Права колонка: AI поради / Швидкі дії */}
+						{/* AI поради + швидкі дії */}
 						<div className="dashboard-widget right-col">
 							<div className="ai-insights">
 								<h3>💡 AI Аналітика</h3>
 								<div className="insight-box">
-									<p>{aiInsight}</p>
+									<p>Скористайтесь чатом-помічником або перейдіть до детального аналізу ваших фінансів.</p>
 								</div>
-								<Link to="/analytics" className="widget-link ai-link">Детальний аналіз &rarr;</Link>
+								<Link to="/analytics" className="widget-link ai-link">Детальний аналіз →</Link>
 							</div>
 
 							<div className="quick-actions">

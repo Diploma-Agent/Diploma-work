@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Register from './templates/Register';
 import Login from './templates/Login';
 import Profile from './templates/Profile';
@@ -8,9 +8,14 @@ import Analytics from './templates/Analytics';
 import Transactions from './templates/Transactions';
 import ChatComponent from './components/ChatComponent';
 
-function App() {
+const AUTH_ROUTES = ['/login', '/register'];
+
+function AppContent() {
+	const location = useLocation();
+	const showChat = !AUTH_ROUTES.includes(location.pathname);
+
 	return (
-		<Router>
+		<>
 			<Routes>
 				<Route path="/register" element={<Register />} />
 				<Route path="/login" element={<Login />} />
@@ -20,7 +25,15 @@ function App() {
 				<Route path="/analytics" element={<Analytics />} />
 				<Route path="/" element={<Navigate to="/login" />} />
 			</Routes>
-			<ChatComponent />
+			{showChat && <ChatComponent />}
+		</>
+	);
+}
+
+function App() {
+	return (
+		<Router>
+			<AppContent />
 		</Router>
 	);
 }

@@ -253,6 +253,29 @@ class FinancialForecast(models.Model):
         return f"{self.user.username} - {self.forecast_type} ({self.period_start} - {self.period_end})"
 
 
+class ChatMessage(models.Model):
+    """Збережені повідомлення чату з AI-асистентом"""
+    ROLE_CHOICES = [
+        ('user', 'Користувач'),
+        ('model', 'AI Асистент'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_messages')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    text = models.TextField()
+    agent = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'chat_messages'
+        ordering = ['created_at']
+        verbose_name = 'Chat Message'
+        verbose_name_plural = 'Chat Messages'
+
+    def __str__(self):
+        return f"{self.user.username} [{self.role}]: {self.text[:50]}"
+
+
 class SyncLog(models.Model):
     """Лог синхронізації з банками та біржами"""
     STATUS_CHOICES = [

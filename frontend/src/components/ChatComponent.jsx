@@ -59,20 +59,66 @@ const formatInline = (text) => {
     });
 };
 
+const WELCOME_MSG = { id: 'welcome', text: 'Привіт! Я ваш фінансовий помічник. Чим можу допомогти?', sender: 'bot', agent: 'Фінансовий Асистент 🤖' };
+
 function ChatComponent() {
     const [isOpen, setIsOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [chatPosition, setChatPosition] = useState(null);
-    const [messages, setMessages] = useState([
-        { id: 1, text: 'Привіт! Я ваш фінансовий помічник. Чим можу допомогти?', sender: 'bot', agent: 'Фінансовий Асистент 🤖' }
-    ]);
+    const [messages, setMessages] = useState([WELCOME_MSG]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [historyLoaded, setHistoryLoaded] = useState(false);
     const [error, setError] = useState(null);
     const messagesEndRef = useRef(null);
     const chatWindowRef = useRef(null);
     const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+    const getToken = () =>
+        localStorage.getItem('access_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('accessToken') ||
+        sessionStorage.getItem('access_token');
+
+    // Завантажуємо збережену історію з бекенду при першому відкритті
+    useEffect(() => {
+        if (!isOpen || historyLoaded) return;
+
+        const token = getToken();
+        if (!token) { setHistoryLoaded(true); return; }
+
+        axios.get(`${API_URL}/finance/ai/chat/history/`, {
+            headers: { Authorization: `Bearer ${token}` }
+        }).then(({ data }) => {
+            const loaded = (data.history || []).map((msg, i) => ({
+                id: `hist-${i}`,
+                text: msg.text,
+                sender: msg.role === 'user' ? 'user' : 'bot',
+                agent: msg.agent || 'Фінансовий Асистент 🤖',
+            }));
+            if (loaded.length > 0) {
+                setMessages([WELCOME_MSG, ...loaded]);
+            }
+        }).catch(() => {
+            // Якщо не вдалося — просто залишаємо привітання
+        }).finally(() => {
+            setHistoryLoaded(true);
+        });
+    }, [isOpen]);
+
+    const handleClearHistory = async () => {
+        const token = getToken();
+        if (!token) return;
+        try {
+            await axios.delete(`${API_URL}/finance/ai/chat/history/`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setMessages([WELCOME_MSG]);
+        } catch {
+            // ігноруємо помилку
+        }
+    };
 
     const toggleChat = () => setIsOpen(!isOpen);
     const toggleExpand = () => setIsExpanded(!isExpanded);
@@ -166,22 +212,13 @@ function ChatComponent() {
         setIsTyping(true);
 
         try {
-            const token = localStorage.getItem('access_token')
-                || localStorage.getItem('token')
-                || localStorage.getItem('accessToken')
-                || sessionStorage.getItem('access_token');
-
+            const token = getToken();
             if (!token) throw new Error('Не авторизовано. Будь ласка, увійдіть в систему.');
 
-            // Передаємо історію (без першого привітання бота)
-            const history = updatedMessages.slice(1, -1).map(msg => ({
-                role: msg.sender === 'user' ? 'user' : 'model',
-                text: msg.text
-            }));
-
+            // Історія тепер зберігається на бекенді — передаємо лише нове повідомлення
             const { data } = await axios.post(
                 `${API_URL}/finance/ai/chat/`,
-                { message: inputText, history },
+                { message: inputText },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -217,6 +254,13 @@ function ChatComponent() {
                             <span>🤖</span> Фінансовий помічник
                         </div>
                         <div className="chat-header-actions">
+                            <button
+                                className="expand-btn"
+                                onClick={handleClearHistory}
+                                title="Очистити історію чату"
+                            >
+                                🗑
+                            </button>
                             <button
                                 className="expand-btn"
                                 onClick={toggleExpand}
