@@ -52,29 +52,95 @@ class BinanceService:
             return response.json()
         except requests.exceptions.RequestException as e:
             raise Exception(f"Binance API request failed: {str(e)}")
-    
+
     def get_account_info(self):
-        """Get account information"""
+        """Get account information (Spot)"""
         return self._make_request('GET', '/api/v3/account')
     
-    def get_balances(self):
-        """Get account balances"""
-        account_info = self.get_account_info()
-        balances = []
-        
-        for balance in account_info.get('balances', []):
-            free = float(balance.get('free', 0))
-            locked = float(balance.get('locked', 0))
+    def get_user_assets(self, need_btc_valuation=True):
+        """
+        Get all user assets (Spot, Funding, etc.)
+        Requires "Permit Universal Transfer" and "Enable Spot & Margin Trading" API Key permissions.
+        """
+        try:
+            params = {}
+            if need_btc_valuation:
+                params['needBtcValuation'] = 'true'
+            # SAPI endpoint for user assets
+            return self._make_request('POST', '/sapi/v1/asset/get-user-asset', params=params, signed=True)
+        except Exception as e:
+            print(f"Failed to fetch user assets (SAPI): {str(e)}")
+            return []
+
+    def get_futures_balances(self):
+        """Get USDT-M Futures account balances"""
+        try:
+            futures_url = "https://fapi.binance.com/fapi/v2/account"
+            params = {'timestamp': int(time.time() * 1000)}
+            query_string = '&'.join([f"{k}={v}" for k, v in params.items()])
+            params['signature'] = self._generate_signature(query_string)
             
-            if free > 0 or locked > 0:
-                balances.append({
-                    'asset': balance.get('asset'),
-                    'free': free,
-                    'locked': locked,
-                    'total': free + locked
-                })
+            response = requests.get(futures_url, headers=self.headers, params=params)
+            if response.status_code == 200:
+                return response.json().get('assets', [])
+            return []
+        except Exception as e:
+            print(f"Failed to fetch futures assets: {str(e)}")
+            return []
+
+    def get_balances(self):
+        """Get account balances (Combined: Spot + Funding + Futures)"""
+        balances_map = {} # asset_name -> {'free': 0, 'locked': 0}
+
+        def add_to_map(asset_name, free, locked):
+            if not asset_name: return
+            free_val = float(free or 0)
+            locked_val = float(locked or 0)
+            if free_val <= 0 and locked_val <= 0: return
+            
+            if asset_name in balances_map:
+                balances_map[asset_name]['free'] += free_val
+                balances_map[asset_name]['locked'] += locked_val
+            else:
+                balances_map[asset_name] = {'free': free_val, 'locked': locked_val}
+
+        # 1. Spot (API v3)
+        try:
+            spot_info = self.get_account_info()
+            for b in spot_info.get('balances', []):
+                add_to_map(b.get('asset'), b.get('free'), b.get('locked'))
+        except Exception: pass
+
+        # 2. Funding (SAPI)
+        try:
+            funding_assets = self.get_user_assets()
+            for asset in funding_assets:
+                # consolidate freeze into locked
+                f = float(asset.get('free', 0))
+                l = float(asset.get('locked', 0)) + float(asset.get('freeze', 0)) + float(asset.get('withdrawing', 0))
+                add_to_map(asset.get('asset'), f, l)
+        except Exception: pass
+
+        # 3. Futures (FAPI)
+        try:
+            futures_assets = self.get_futures_balances()
+            for asset in futures_assets:
+                bal = float(asset.get('walletBalance', 0))
+                if bal > 0:
+                    add_to_map(asset.get('asset'), bal, 0)
+        except Exception: pass
+
+        # Final list mapping
+        final_balances = []
+        for asset, data in balances_map.items():
+            final_balances.append({
+                'asset': asset,
+                'free': data['free'],
+                'locked': data['locked'],
+                'total': data['free'] + data['locked']
+            })
         
-        return balances
+        return final_balances
     
     def get_trades(self, symbol, limit=500):
         """Get recent trades for a symbol"""
