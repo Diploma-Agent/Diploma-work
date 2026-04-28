@@ -115,8 +115,8 @@ function Analytics() {
         // Встановлюємо дату на початок поточного місяця (1 число)
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        const monthTransactions = bankData.transactions.filter(t => 
-            new Date(t.transaction_date) >= startOfMonth
+        const monthTransactions = bankData.transactions.filter(t =>
+            t.type !== 'transfer' && new Date(t.transaction_date) >= startOfMonth
         );
 
         const income = monthTransactions

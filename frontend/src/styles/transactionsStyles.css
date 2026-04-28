@@ -517,3 +517,27 @@
 		gap: 8px;
 	}
 }
+
+.transaction-amount.amount-positive {
+	color: #10b981;
+	background: rgba(16, 185, 129, 0.1);
+	border-color: rgba(16, 185, 129, 0.2);
+}
+
+.transaction-amount.amount-negative {
+	color: #ef4444;
+	background: rgba(239, 68, 68, 0.1);
+	border-color: rgba(239, 68, 68, 0.2);
+}
+
+.transaction-amount.amount-neutral {
+	color: #94a3b8;
+	background: rgba(148, 163, 184, 0.1);
+	border-color: rgba(148, 163, 184, 0.2);
+}
+
+.transaction-transfer .transaction-amount {
+	color: #94a3b8;
+	background: rgba(148, 163, 184, 0.1);
+	border-color: rgba(148, 163, 184, 0.2);
+}
