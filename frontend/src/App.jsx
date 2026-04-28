@@ -10,6 +10,11 @@ import ChatComponent from './components/ChatComponent';
 
 const AUTH_ROUTES = ['/login', '/register'];
 
+const PrivateRoute = ({ children }) => {
+	const isAuthenticated = localStorage.getItem('token');
+	return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
 function AppContent() {
 	const location = useLocation();
 	const showChat = !AUTH_ROUTES.includes(location.pathname);
@@ -19,11 +24,13 @@ function AppContent() {
 			<Routes>
 				<Route path="/register" element={<Register />} />
 				<Route path="/login" element={<Login />} />
-				<Route path="/profile" element={<Profile />} />
-				<Route path="/dashboard" element={<Dashboard />} />
-				<Route path="/transactions" element={<Transactions />} />
-				<Route path="/analytics" element={<Analytics />} />
-				<Route path="/" element={<Navigate to="/login" />} />
+				
+				<Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+				<Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+				<Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
+				<Route path="/analytics" element={<PrivateRoute><Analytics /></PrivateRoute>} />
+				
+				<Route path="/" element={<Navigate to="/login" replace />} />
 			</Routes>
 			{showChat && <ChatComponent />}
 		</>
