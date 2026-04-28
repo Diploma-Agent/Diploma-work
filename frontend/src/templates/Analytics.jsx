@@ -34,29 +34,32 @@ function Analytics() {
             setLoading(true);
             setError('');
             
-            // Завантажуємо список підключених бірж
-            try {
-                const exchangesList = await financeService.getExchanges(token);
-                setExchanges(exchangesList);
-                if (exchangesList && exchangesList.length > 0) {
-                    setSelectedExchange(exchangesList[0].exchange_name);
-                } else {
-                    setExchanges([]); 
-                }
-            } catch (err) {
-                console.error('Помилка завантаження списку бірж:', err);
-                setError('Не вдалося завантажити список бірж');
-            }
+            const fetchExchanges = financeService.getExchanges(token)
+                .then(exchangesList => {
+                    setExchanges(exchangesList);
+                    if (exchangesList && exchangesList.length > 0) {
+                        setSelectedExchange(exchangesList[0].exchange_name);
+                    } else {
+                        setExchanges([]); 
+                    }
+                })
+                .catch(err => {
+                    console.error('Помилка завантаження списку бірж:', err);
+                    setError('Не вдалося завантажити список бірж');
+                });
 
-            // Завантажуємо банківську аналітику (незалежно від бірж)
-            try {
-                const bankData = await financeService.getBankAnalytics(token);
-                const analytics = calculateBankAnalytics(bankData);
-                setBankAnalytics(analytics);
-            } catch (err) {
-                console.error('Помилка завантаження банківської аналітики:', err);
-                setError(prev => prev ? `${prev}. Не вдалося завантажити банківські дані` : 'Не вдалося завантажити банківські дані');
-            }
+            const fetchBankData = financeService.getBankAnalytics(token)
+                .then(bankData => {
+                    const analytics = calculateBankAnalytics(bankData);
+                    setBankAnalytics(analytics);
+                })
+                .catch(err => {
+                    console.error('Помилка завантаження банківської аналітики:', err);
+                    setError(prev => prev ? `${prev}. Не вдалося завантажити банківські дані` : 'Не вдалося завантажити банківські дані');
+                });
+
+            // Паралельне завантаження
+            await Promise.all([fetchExchanges, fetchBankData]);
 
             setLoading(false);
         };
@@ -71,32 +74,34 @@ function Analytics() {
         const fetchExchangeData = async () => {
             const token = localStorage.getItem('token');
             
-            // Баланс
-            try {
-                const balanceData = await financeService.getExchangeBalance(token, selectedExchange);
-                setBalance(balanceData);
-            } catch (err) {
-                console.error(`Помилка завантаження балансу для ${selectedExchange}:`, err);
-                setBalance(null);
-            }
+            // Одразу скидаємо старі дані, щоб показати прелоадер для компонента
+            setBalance(null);
+            setSpotOrders([]);
+            setFuturesOrders([]);
+            
+            // Запускаємо всі запити паралельно для оптимізації швидкості
+            const balancePromise = financeService.getExchangeBalance(token, selectedExchange)
+                .then(data => setBalance(data))
+                .catch(err => {
+                    console.error(`Помилка завантаження балансу для ${selectedExchange}:`, err);
+                    setBalance(null);
+                });
 
-            // Ордери (Spot)
-            try {
-                const spotData = await financeService.getExchangeOrders(token, selectedExchange, 'spot');
-                setSpotOrders(spotData?.result?.list || spotData?.list || []);
-            } catch (err) {
-                console.error(`Помилка завантаження Spot ордерів для ${selectedExchange}:`, err);
-                setSpotOrders([]);
-            }
+            const spotPromise = financeService.getExchangeOrders(token, selectedExchange, 'spot')
+                .then(data => setSpotOrders(data?.result?.list || data?.list || []))
+                .catch(err => {
+                    console.error(`Помилка завантаження Spot ордерів для ${selectedExchange}:`, err);
+                    setSpotOrders([]);
+                });
 
-            // Ордери (Futures)
-            try {
-                const futuresData = await financeService.getExchangeOrders(token, selectedExchange, 'linear'); // 'linear' для Bybit futures
-                setFuturesOrders(futuresData?.result?.list || futuresData?.list || []);
-            } catch (err) {
-                console.warn(`Futures ордери недоступні або сталася помилка для ${selectedExchange}:`, err);
-                setFuturesOrders([]);
-            }
+            const futuresPromise = financeService.getExchangeOrders(token, selectedExchange, 'linear') // 'linear' для Bybit futures
+                .then(data => setFuturesOrders(data?.result?.list || data?.list || []))
+                .catch(err => {
+                    console.warn(`Futures ордери недоступні або сталася помилка для ${selectedExchange}:`, err);
+                    setFuturesOrders([]);
+                });
+
+            await Promise.all([balancePromise, spotPromise, futuresPromise]);
         };
 
         fetchExchangeData();
@@ -199,10 +204,19 @@ function Analytics() {
     };
 
     const renderBalance = () => {
+        if (!balance) {
+             return (
+                <div className="analytics-card balance-card">
+                    <h3>💰 Баланс ({selectedExchange ? selectedExchange.toUpperCase() : '---'})</h3>
+                    <div className="loading-spinner">Завантаження балансу...</div>
+                </div>
+            );
+        }
+
         // Перевірка структури даних (адаптовано під Bybit API response)
         const accountList = balance?.result?.list || balance?.list;
 
-        if (!balance || !accountList?.[0]) {
+        if (!accountList?.[0]) {
              return (
                 <div className="analytics-card balance-card">
                     <h3>💰 Баланс ({selectedExchange ? selectedExchange.toUpperCase() : '---'})</h3>
@@ -238,6 +252,32 @@ function Analytics() {
         const currentOrders = activeTab === 'spot' ? spotOrders : futuresOrders;
         const title = activeTab === 'spot' ? 'Spot Ордери' : 'Futures Ордери';
         const icon = activeTab === 'spot' ? '📋' : '📈';
+
+        // Якщо масив дорівнює null або баланс ще вантажиться
+        // для точного визначення завантаження можна перевіряти стан
+        if (!balance) {
+             return (
+                <div className="analytics-card orders-card">
+                    <div className="orders-header-tabs">
+                        <button 
+                            className={`tab-button ${activeTab === 'spot' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('spot')}
+                        >
+                            Spot
+                        </button>
+                        <button 
+                            className={`tab-button ${activeTab === 'futures' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('futures')}
+                        >
+                            Futures
+                        </button>
+                    </div>
+
+                    <h3>{icon} {title}</h3>
+                    <div className="loading-spinner">Завантаження ордерів...</div>
+                </div>
+            );
+        }
 
         return (
             <div className="analytics-card orders-card">
