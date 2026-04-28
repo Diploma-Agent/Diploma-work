@@ -5,6 +5,15 @@ import Navbar from '../components/Navbar';
 import { financeService } from '../api/financeService';
 import '../styles/analyticsStyles.css';
 
+function renderForecastText(text) {
+    if (!text) return null;
+    return text
+        .replace(/^#{1,3}\s+(.+)$/gm, '$1')
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/\*(.+?)\*/g, '$1')
+        .trim();
+}
+
 function Analytics() {
     // --- State для Біржі ---
     const [exchanges, setExchanges] = useState([]);
@@ -16,6 +25,8 @@ function Analytics() {
 
     // --- State для Банку ---
     const [bankAnalytics, setBankAnalytics] = useState(null);
+    const [forecastData, setForecastData] = useState(null);
+    const [forecastLoading, setForecastLoading] = useState(false);
 
     // --- Загальний State ---
     const [loading, setLoading] = useState(true);
@@ -33,14 +44,14 @@ function Analytics() {
 
             setLoading(true);
             setError('');
-            
+
             const fetchExchanges = financeService.getExchanges(token)
                 .then(exchangesList => {
                     setExchanges(exchangesList);
                     if (exchangesList && exchangesList.length > 0) {
                         setSelectedExchange(exchangesList[0].exchange_name);
                     } else {
-                        setExchanges([]); 
+                        setExchanges([]);
                     }
                 })
                 .catch(err => {
@@ -58,8 +69,14 @@ function Analytics() {
                     setError(prev => prev ? `${prev}. Не вдалося завантажити банківські дані` : 'Не вдалося завантажити банківські дані');
                 });
 
+            setForecastLoading(true);
+            const fetchForecast = financeService.aiForecast(token, 30)
+                .then(data => setForecastData(data))
+                .catch(err => console.error('Помилка завантаження AI прогнозу:', err))
+                .finally(() => setForecastLoading(false));
+
             // Паралельне завантаження
-            await Promise.all([fetchExchanges, fetchBankData]);
+            await Promise.all([fetchExchanges, fetchBankData, fetchForecast]);
 
             setLoading(false);
         };
@@ -73,12 +90,12 @@ function Analytics() {
 
         const fetchExchangeData = async () => {
             const token = localStorage.getItem('token');
-            
+
             // Одразу скидаємо старі дані, щоб показати прелоадер для компонента
             setBalance(null);
             setSpotOrders([]);
             setFuturesOrders([]);
-            
+
             // Запускаємо всі запити паралельно для оптимізації швидкості
             const balancePromise = financeService.getExchangeBalance(token, selectedExchange)
                 .then(data => setBalance(data))
@@ -130,7 +147,7 @@ function Analytics() {
         // Підготовка даних для графіку витрат та надходжень по днях
         const chartData = [];
         const daysInMonth = now.getDate(); // Показуємо дні до сьогодні
-        
+
         for (let i = 1; i <= daysInMonth; i++) {
             chartData.push({ name: `${i}`, expense: 0, income: 0 });
         }
@@ -187,9 +204,9 @@ function Analytics() {
         return (
             <div className="exchange-selector">
                 <label htmlFor="exchange-select">Оберіть біржу:</label>
-                <select 
+                <select
                     id="exchange-select"
-                    value={selectedExchange} 
+                    value={selectedExchange}
                     onChange={(e) => setSelectedExchange(e.target.value)}
                     className="exchange-select-input"
                 >
@@ -205,7 +222,7 @@ function Analytics() {
 
     const renderBalance = () => {
         if (!balance) {
-             return (
+            return (
                 <div className="analytics-card balance-card">
                     <h3>💰 Баланс ({selectedExchange ? selectedExchange.toUpperCase() : '---'})</h3>
                     <div className="loading-spinner">Завантаження балансу...</div>
@@ -217,14 +234,14 @@ function Analytics() {
         const accountList = balance?.result?.list || balance?.list;
 
         if (!accountList?.[0]) {
-             return (
+            return (
                 <div className="analytics-card balance-card">
                     <h3>💰 Баланс ({selectedExchange ? selectedExchange.toUpperCase() : '---'})</h3>
                     <div className="no-data">Немає даних про баланс</div>
                 </div>
             );
         }
-        
+
         const account = accountList[0];
         const coins = account.coin || [];
 
@@ -256,16 +273,16 @@ function Analytics() {
         // Якщо масив дорівнює null або баланс ще вантажиться
         // для точного визначення завантаження можна перевіряти стан
         if (!balance) {
-             return (
+            return (
                 <div className="analytics-card orders-card">
                     <div className="orders-header-tabs">
-                        <button 
+                        <button
                             className={`tab-button ${activeTab === 'spot' ? 'active' : ''}`}
                             onClick={() => setActiveTab('spot')}
                         >
                             Spot
                         </button>
-                        <button 
+                        <button
                             className={`tab-button ${activeTab === 'futures' ? 'active' : ''}`}
                             onClick={() => setActiveTab('futures')}
                         >
@@ -282,13 +299,13 @@ function Analytics() {
         return (
             <div className="analytics-card orders-card">
                 <div className="orders-header-tabs">
-                    <button 
+                    <button
                         className={`tab-button ${activeTab === 'spot' ? 'active' : ''}`}
                         onClick={() => setActiveTab('spot')}
                     >
                         Spot
                     </button>
-                    <button 
+                    <button
                         className={`tab-button ${activeTab === 'futures' ? 'active' : ''}`}
                         onClick={() => setActiveTab('futures')}
                     >
@@ -297,7 +314,7 @@ function Analytics() {
                 </div>
 
                 <h3>{icon} {title} ({currentOrders.length})</h3>
-                
+
                 {currentOrders.length === 0 ? (
                     <div className="no-data">Немає активних ордерів</div>
                 ) : (
@@ -342,7 +359,7 @@ function Analytics() {
                     </div>
                 ) : (
                     <div className="analytics-container">
-                        
+
                         {/* Секція Біржі */}
                         <div className="analytics-header">
                             <h1 className="analytics-title">📊 Аналітика Біржі</h1>
@@ -409,20 +426,158 @@ function Analytics() {
                                         </div>
                                     </div>
 
-                                    {/* Прогноз балансу */}
+                                    {/* Прогноз балансу (ForecastAgent) */}
                                     <div className="analytics-card analytics-card--bank">
                                         <div className="card-icon">🔮</div>
-                                        <h3 className="card-title">Прогноз на місяць</h3>
-                                        <div className="forecast-info">
-                                            <div className="forecast-balance">
-                                                {bankAnalytics.forecastBalance} UAH
+                                        <h3 className="card-title">
+                                            Прогноз на 30 днів
+                                            <span className="agent-badge">AI Регресія</span>
+                                        </h3>
+                                        {forecastLoading ? (
+                                            <div className="ai-loading">
+                                                <div className="spinner-sm" />
+                                                Розрахунок прогнозу...
                                             </div>
-                                            <p className="forecast-hint">
-                                                При середніх витратах {bankAnalytics.averageDailyExpenses} UAH/день
-                                            </p>
+                                        ) : forecastData?.data ? (
+                                            <>
+                                                <div className="forecast-grid">
+                                                    <div className="forecast-item">
+                                                        <div className="forecast-label">Доходи</div>
+                                                        <div className="forecast-value positive">
+                                                            +{forecastData.data.forecast_income.toLocaleString('uk-UA')}
+                                                        </div>
+                                                        <div className={`forecast-trend ${forecastData.data.inc_trend >= 0 ? 'up' : 'down'}`}>
+                                                            {forecastData.data.inc_trend >= 0 ? '↑' : '↓'} {Math.abs(forecastData.data.inc_trend).toFixed(0)} грн/тиж
+                                                        </div>
+                                                    </div>
+                                                    <div className="forecast-item">
+                                                        <div className="forecast-label">Витрати</div>
+                                                        <div className="forecast-value negative">
+                                                            −{forecastData.data.forecast_expense.toLocaleString('uk-UA')}
+                                                        </div>
+                                                        <div className={`forecast-trend ${forecastData.data.exp_trend > 0 ? 'down' : 'up'}`}>
+                                                            {forecastData.data.exp_trend > 0 ? '↑' : '↓'} {Math.abs(forecastData.data.exp_trend).toFixed(0)} грн/тиж
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="forecast-balance">
+                                                    {forecastData.data.forecast_balance >= 0 ? '+' : ''}
+                                                    {forecastData.data.forecast_balance.toLocaleString('uk-UA')} UAH
+                                                </div>
+                                                {forecastData.data.accuracy?.expenses?.r2 != null && (
+                                                    <div className="accuracy-section">
+                                                        <div className="accuracy-title">Точність моделі</div>
+                                                        <div className="accuracy-grid">
+                                                            <div className="accuracy-item">
+                                                                <div className="accuracy-label">R² витрат</div>
+                                                                <div className="accuracy-metric">
+                                                                    {forecastData.data.accuracy.expenses.r2?.toFixed(3) ?? '—'}
+                                                                </div>
+                                                            </div>
+                                                            <div className="accuracy-item">
+                                                                <div className="accuracy-label">R² доходів</div>
+                                                                <div className="accuracy-metric">
+                                                                    {forecastData.data.accuracy.income.r2?.toFixed(3) ?? '—'}
+                                                                </div>
+                                                            </div>
+                                                            <div className="accuracy-item">
+                                                                <div className="accuracy-label">MAE</div>
+                                                                <div className="accuracy-metric">
+                                                                    {forecastData.data.accuracy.expenses.mae ?? '—'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div className="forecast-info">
+                                                <div className="forecast-balance">
+                                                    {bankAnalytics.forecastBalance} UAH
+                                                </div>
+                                                <p className="forecast-hint">
+                                                    При середніх витратах {bankAnalytics.averageDailyExpenses} UAH/день
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Розподіл витрат — donut chart */}
+                                    {(() => {
+                                        const cats = bankAnalytics.topCategories;
+                                        const total = cats.reduce((s, c) => s + c.amount, 0);
+                                        if (!cats.length || total === 0) return null;
+
+                                        const colors = ['#667eea', '#a78bfa', '#4ade80', '#fbbf24', '#f87171'];
+                                        const r = 46;
+                                        const circ = 2 * Math.PI * r;
+                                        let cumPct = 0;
+
+                                        const slices = cats.map((cat, i) => {
+                                            const pct = cat.amount / total;
+                                            const rotation = -90 + cumPct * 360;
+                                            cumPct += pct;
+                                            return { ...cat, pct, rotation, color: colors[i % colors.length] };
+                                        });
+
+                                        return (
+                                            <div className="analytics-card analytics-card--bank donut-card">
+                                                <div className="card-icon">🍩</div>
+                                                <h3 className="card-title">Розподіл витрат</h3>
+                                                <div className="donut-body">
+                                                    <div className="donut-chart-wrap">
+                                                        <svg width="132" height="132" viewBox="0 0 132 132">
+                                                            {slices.map((s, i) => (
+                                                                <circle key={i}
+                                                                    cx="66" cy="66" r={r}
+                                                                    fill="none"
+                                                                    stroke={s.color}
+                                                                    strokeWidth="20"
+                                                                    strokeDasharray={`${s.pct * circ * 0.95} ${circ}`}
+                                                                    transform={`rotate(${s.rotation} 66 66)`}
+                                                                />
+                                                            ))}
+                                                            <circle cx="66" cy="66" r="30" fill="rgba(30,41,59,0.95)" />
+                                                            <text x="66" y="62" textAnchor="middle"
+                                                                fill="#94a3b8" fontSize="9" fontFamily="inherit">UAH</text>
+                                                            <text x="66" y="75" textAnchor="middle"
+                                                                fill="#f1f5f9" fontSize="12" fontWeight="800"
+                                                                fontFamily="inherit">{total.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}</text>
+                                                        </svg>
+                                                    </div>
+                                                    <div className="donut-legend">
+                                                        {slices.map((s, i) => (
+                                                            <div key={i} className="donut-legend-item">
+                                                                <span className="donut-dot" style={{ background: s.color }} />
+                                                                <span className="donut-legend-name">
+                                                                    {s.name.length > 16 ? s.name.slice(0, 16) + '…' : s.name}
+                                                                </span>
+                                                                <span className="donut-legend-pct">
+                                                                    {(s.pct * 100).toFixed(0)}%
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                {/* AI Аналіз прогнозу — повна ширина */}
+                                {forecastData?.forecast && (
+                                    <div className="ai-forecast-card" style={{ marginBottom: '35px' }}>
+                                        <div className="ai-forecast-header">
+                                            <div className="ai-forecast-icon">🤖</div>
+                                            <div className="ai-forecast-meta">
+                                                <h3 className="ai-forecast-title">AI Аналіз прогнозу</h3>
+                                            </div>
+                                        </div>
+                                        <div className="ai-forecast-body">
+                                            <div className="ai-text">{renderForecastText(forecastData.forecast)}</div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
                                 {/* Графік витрат */}
                                 <div className="analytics-card analytics-card--full analytics-card--bank" style={{ marginBottom: '35px' }}>
@@ -432,25 +587,25 @@ function Analytics() {
                                         <ResponsiveContainer>
                                             <BarChart data={bankAnalytics.chartData}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-                                                <XAxis 
-                                                    dataKey="name" 
-                                                    stroke="#94a3b8" 
+                                                <XAxis
+                                                    dataKey="name"
+                                                    stroke="#94a3b8"
                                                     tick={{ fill: '#94a3b8', fontSize: 12 }}
                                                     tickLine={false}
                                                     axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
                                                 />
-                                                <YAxis 
-                                                    stroke="#94a3b8" 
+                                                <YAxis
+                                                    stroke="#94a3b8"
                                                     tick={{ fill: '#94a3b8', fontSize: 12 }}
                                                     tickLine={false}
                                                     axisLine={false}
                                                     width={60}
                                                 />
-                                                <Tooltip 
+                                                <Tooltip
                                                     contentStyle={{ backgroundColor: '#1e293b', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', borderRadius: '8px' }}
                                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                                     formatter={(value, name) => [
-                                                        `${parseFloat(value).toFixed(2)} UAH`, 
+                                                        `${parseFloat(value).toFixed(2)} UAH`,
                                                         name === 'income' ? 'Надходження' : 'Витрати'
                                                     ]}
                                                 />
@@ -473,8 +628,8 @@ function Analytics() {
                                                     <span className="category-amount">{cat.amount.toFixed(2)} UAH</span>
                                                 </div>
                                                 <div className="category-bar">
-                                                    <div 
-                                                        className="category-progress" 
+                                                    <div
+                                                        className="category-progress"
                                                         style={{ width: `${(cat.amount / bankAnalytics.expenses * 100)}%` }}
                                                     />
                                                 </div>
@@ -483,28 +638,6 @@ function Analytics() {
                                     </div>
                                 </div>
 
-                                {/* Рекомендації інвестування */}
-                                <div className="analytics-card analytics-card--full analytics-card--recommendation">
-                                    <div className="card-icon">💡</div>
-                                    <h3 className="card-title">Рекомендації для Інвестування</h3>
-                                    <div className="recommendation-content">
-                                        <div className="recommendation-item">
-                                            <span className="recommendation-label">Рекомендована сума для інвестування:</span>
-                                            <span className="recommendation-value">{bankAnalytics.recommendedInvestment} UAH</span>
-                                        </div>
-                                        <div className="recommendation-hint">
-                                            💡 Рекомендуємо інвестувати не більше 30% від вашого балансу для диверсифікації ризиків
-                                        </div>
-                                        <div className="recommendation-actions">
-                                            <button className="recommendation-btn recommendation-btn--primary">
-                                                📊 Переглянути стратегії
-                                            </button>
-                                            <button className="recommendation-btn recommendation-btn--secondary">
-                                                💰 Перевести на біржу
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
                             </>
                         ) : (
                             <div className="analytics-card analytics-card--full analytics-card--bank">

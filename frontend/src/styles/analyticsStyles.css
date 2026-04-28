@@ -754,6 +754,147 @@
     to { transform: rotate(360deg); }
 }
 
+/* Donut Chart Card */
+.donut-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.donut-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    flex: 1;
+}
+
+.donut-chart-wrap {
+    display: flex;
+    justify-content: center;
+    filter: drop-shadow(0 4px 20px rgba(102, 126, 234, 0.25));
+}
+
+.donut-legend {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.donut-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.donut-legend-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.donut-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.donut-legend-name {
+    flex: 1;
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.donut-legend-pct {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    min-width: 32px;
+    text-align: right;
+}
+
+/* AI Forecast Card */
+.ai-forecast-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.12) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 20px;
+    padding: 32px 36px;
+    position: relative;
+    overflow: hidden;
+}
+
+.ai-forecast-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #a78bfa, #667eea);
+    background-size: 200% 100%;
+    animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.ai-forecast-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.ai-forecast-icon {
+    font-size: 2.2rem;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+    border-radius: 14px;
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    flex-shrink: 0;
+}
+
+.ai-forecast-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ai-forecast-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0;
+    border: none;
+    padding: 0;
+}
+
+.ai-forecast-body {
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 12px;
+    padding: 24px 28px;
+    border-left: 3px solid rgba(102, 126, 234, 0.6);
+}
+
+.ai-forecast-body .ai-text {
+    color: #cbd5e1;
+    font-size: 1rem;
+    line-height: 1.8;
+    white-space: pre-line;
+}
+
 /* AI Agent Styles */
 .agent-badge {
     display: inline-flex;

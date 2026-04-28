@@ -6,7 +6,7 @@ from drf_yasg import openapi
 import traceback
 import secrets
 import pytz
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from django.conf import settings
 
 from .models import (
@@ -32,6 +32,7 @@ from .services.ai_agents import (
     AnomalyDetectorAgent,
     ChatAgent
 )
+from .tasks import sync_user_connection
 
 
 class BankConnectionListView(generics.ListAPIView):
@@ -86,6 +87,12 @@ class AddBankConnectionView(views.APIView):
                 'status': 'active'
             }
         )
+
+        # Запускаємо початкову синхронізацію у фоні через Celery
+        try:
+            sync_user_connection.delay(request.user.id, bank_name, bank_connection.id)
+        except Exception:
+            pass  # Celery може бути недоступний — не блокуємо відповідь
 
         return Response(
             BankConnectionSerializer(bank_connection).data,
@@ -174,6 +181,12 @@ class AddCryptoExchangeView(views.APIView):
                 'status': 'active'
             }
         )
+
+        # Запускаємо початкову синхронізацію у фоні через Celery
+        try:
+            sync_user_connection.delay(request.user.id, exchange_name, exchange.id)
+        except Exception:
+            pass  # Celery може бути недоступний — не блокуємо відповідь
 
         return Response(
             CryptoExchangeSerializer(exchange).data,
@@ -782,6 +795,56 @@ class AIForecastView(views.APIView):
                 transactions = _get_uah_transactions(bank.access_token, days=30)
 
             result = ForecastAgent.forecast(transactions, days)
+
+            # Зберігаємо прогноз в БД
+            if 'data' in result:
+                d = result['data']
+                today = date.today()
+                period_end = today + timedelta(days=days)
+
+                def r2_to_confidence(metrics):
+                    r2 = (metrics or {}).get('r2')
+                    if r2 is None:
+                        return 50.0
+                    return round(max(0.0, min(100.0, float(r2) * 100)), 2)
+
+                exp_conf = r2_to_confidence(d['accuracy']['expenses'])
+                inc_conf = r2_to_confidence(d['accuracy']['income'])
+
+                FinancialForecast.objects.create(
+                    user=request.user,
+                    forecast_type='expense',
+                    period_start=today,
+                    period_end=period_end,
+                    predicted_value=d['forecast_expense'],
+                    currency='UAH',
+                    confidence_score=exp_conf,
+                    model_used='linear_regression',
+                    parameters=d,
+                )
+                FinancialForecast.objects.create(
+                    user=request.user,
+                    forecast_type='income',
+                    period_start=today,
+                    period_end=period_end,
+                    predicted_value=d['forecast_income'],
+                    currency='UAH',
+                    confidence_score=inc_conf,
+                    model_used='linear_regression',
+                    parameters=d,
+                )
+                FinancialForecast.objects.create(
+                    user=request.user,
+                    forecast_type='balance',
+                    period_start=today,
+                    period_end=period_end,
+                    predicted_value=d['forecast_balance'],
+                    currency='UAH',
+                    confidence_score=round((exp_conf + inc_conf) / 2, 2),
+                    model_used='linear_regression',
+                    parameters=d,
+                )
+
             return Response(result)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
