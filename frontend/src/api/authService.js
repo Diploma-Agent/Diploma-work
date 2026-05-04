@@ -110,7 +110,13 @@ export const authService = {
 			},
 			body: JSON.stringify({
 				first_name: data.name,
-				email: data.email
+				email: data.email,
+				phone: data.phone || '',
+				dateOfBirth: data.dateOfBirth || null,
+				location: data.location || '',
+				bio: data.bio || '',
+				telegram: data.telegram || '',
+				linkedin: data.linkedin || ''
 			}),
 		});
 

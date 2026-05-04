@@ -210,23 +210,6 @@
 	background-color: #0f172a;
 }
 
-.profile-input--phone {
-    
-	padding-left: 40px;
-}
-
-.profile-input--location {
-	padding-left: 40px;
-}
-
-.profile-input--telegram {
-	padding-left: 40px;
-}
-
-.profile-input--linkedin {
-	padding-left: 40px;
-}
-
 .profile-buttons,
 .profile-actions {
 	display: flex;

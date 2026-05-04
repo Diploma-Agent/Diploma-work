@@ -220,7 +220,7 @@ const ProfileTab = ({
             <div className="profile-info">
                 <p className="profile-info-item">
                     <strong>Дата реєстрації:</strong>{' '}
-                    {new Date(user.createdAt || Date.now()).toLocaleDateString('uk-UA')}
+                    {new Date(user.date_joined || user.createdAt || Date.now()).toLocaleDateString('uk-UA')}
                 </p>
             </div>
         </>

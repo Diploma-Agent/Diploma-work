@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth import authenticate
+from finance.models import UserProfile
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -82,11 +83,39 @@ class LoginSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for user data"""
+    phone = serializers.CharField(source='profile.phone', required=False, allow_blank=True, allow_null=True)
+    dateOfBirth = serializers.DateField(source='profile.date_of_birth', required=False, allow_null=True)
+    location = serializers.CharField(source='profile.location', required=False, allow_blank=True, allow_null=True)
+    bio = serializers.CharField(source='profile.bio', required=False, allow_blank=True, allow_null=True)
+    telegram = serializers.CharField(source='profile.telegram', required=False, allow_blank=True, allow_null=True)
+    linkedin = serializers.URLField(source='profile.linkedin', required=False, allow_blank=True, allow_null=True)
+
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'first_name',
-                  'last_name', 'date_joined')
+                  'last_name', 'date_joined', 'phone', 'dateOfBirth', 'location', 'bio', 'telegram', 'linkedin')
         read_only_fields = ('id', 'username', 'date_joined')
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop('profile', {})
+        
+        # Оновлення базових полів користувача
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.email = validated_data.get('email', instance.email)
+        instance.save()
+        
+        # Оновлення або створення профілю
+        profile, created = UserProfile.objects.get_or_create(user=instance)
+        profile.phone = profile_data.get('phone', profile.phone)
+        profile.date_of_birth = profile_data.get('date_of_birth', profile.date_of_birth)
+        profile.location = profile_data.get('location', profile.location)
+        profile.bio = profile_data.get('bio', profile.bio)
+        profile.telegram = profile_data.get('telegram', profile.telegram)
+        profile.linkedin = profile_data.get('linkedin', profile.linkedin)
+        profile.save()
+        
+        return instance
 
 
 class ChangePasswordSerializer(serializers.Serializer):

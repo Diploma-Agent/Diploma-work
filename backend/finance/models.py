@@ -36,6 +36,11 @@ class UserProfile(models.Model):
     """Розширений профіль користувача"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     phone = models.CharField(max_length=20, blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+    location = models.CharField(max_length=255, blank=True, null=True)
+    bio = models.TextField(max_length=500, blank=True, null=True)
+    telegram = models.CharField(max_length=100, blank=True, null=True)
+    linkedin = models.URLField(max_length=200, blank=True, null=True)
     currency_preference = models.CharField(max_length=3, default='UAH')
     timezone = models.CharField(max_length=50, default='Europe/Kiev')
     created_at = models.DateTimeField(auto_now_add=True)

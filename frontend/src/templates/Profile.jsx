@@ -81,7 +81,41 @@ function Profile() {
 		}
 	};
 
-	const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+	const onChange = (e) => {
+		const { name, value } = e.target;
+		
+		if (name === 'phone') {
+			let digits = value.replace(/\D/g, '');
+			if (digits.length > 12) {
+				digits = digits.slice(0, 12);
+			}
+			
+			let formatted = '';
+			if (digits.length > 0) {
+				formatted = '+';
+				formatted += digits.substring(0, 3);
+			}
+			if (digits.length > 3) {
+				formatted += ' (' + digits.substring(3, 5);
+			}
+			if (digits.length > 5) {
+				formatted += ') ' + digits.substring(5, 8);
+			}
+			if (digits.length > 8) {
+				formatted += '-' + digits.substring(8, 10);
+			}
+			if (digits.length > 10) {
+				formatted += '-' + digits.substring(10, 12);
+			}
+			
+			if (digits.length === 0) formatted = '';
+
+			setForm({ ...form, [name]: formatted });
+			return;
+		}
+
+		setForm({ ...form, [name]: value });
+	};
 
 	const onBankChange = (e) => setBankForm({ ...bankForm, [e.target.name]: e.target.value });
 
