@@ -32,6 +32,8 @@ function Analytics() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const [hoveredSliceIdx, setHoveredSliceIdx] = useState(null);
+    const [hoveredLegendIdx, setHoveredLegendIdx] = useState(null);
 
     // 1. Завантаження списку бірж та банківських даних при старті
     useEffect(() => {
@@ -525,35 +527,51 @@ function Analytics() {
                                                 <div className="card-icon">🍩</div>
                                                 <h3 className="card-title">Розподіл витрат</h3>
                                                 <div className="donut-body">
-                                                    <div className="donut-chart-wrap">
+                                                    <div className="donut-chart-wrap" style={{ position: 'relative' }}>
                                                         <svg width="132" height="132" viewBox="0 0 132 132">
                                                             {slices.map((s, i) => (
                                                                 <circle key={i}
                                                                     cx="66" cy="66" r={r}
                                                                     fill="none"
                                                                     stroke={s.color}
-                                                                    strokeWidth="20"
+                                                                    strokeWidth={hoveredSliceIdx === i ? "24" : "20"}
                                                                     strokeDasharray={`${s.pct * circ * 0.95} ${circ}`}
                                                                     transform={`rotate(${s.rotation} 66 66)`}
+                                                                    onMouseEnter={() => setHoveredSliceIdx(i)}
+                                                                    onMouseLeave={() => setHoveredSliceIdx(null)}
+                                                                    style={{ cursor: 'pointer', transition: 'stroke-width 0.2s', opacity: hoveredSliceIdx !== null && hoveredSliceIdx !== i ? 0.6 : 1 }}
                                                                 />
                                                             ))}
                                                             <circle cx="66" cy="66" r="30" fill="rgba(30,41,59,0.95)" />
-                                                            <text x="66" y="62" textAnchor="middle"
-                                                                fill="#94a3b8" fontSize="9" fontFamily="inherit">UAH</text>
+                                                            <text x="66" y="58" textAnchor="middle"
+                                                                fill="#94a3b8" fontSize="9" fontFamily="inherit">
+                                                                {hoveredSliceIdx !== null ? slices[hoveredSliceIdx].name.slice(0, 12) : 'UAH'}
+                                                            </text>
                                                             <text x="66" y="75" textAnchor="middle"
                                                                 fill="#f1f5f9" fontSize="12" fontWeight="800"
-                                                                fontFamily="inherit">{total.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}</text>
+                                                                fontFamily="inherit">
+                                                                {hoveredSliceIdx !== null 
+                                                                    ? slices[hoveredSliceIdx].amount.toLocaleString('uk-UA', { maximumFractionDigits: 0 }) 
+                                                                    : total.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
+                                                            </text>
                                                         </svg>
                                                     </div>
                                                     <div className="donut-legend">
                                                         {slices.map((s, i) => (
-                                                            <div key={i} className="donut-legend-item">
+                                                            <div key={i} 
+                                                                className="donut-legend-item"
+                                                                onMouseEnter={() => setHoveredLegendIdx(i)}
+                                                                onMouseLeave={() => setHoveredLegendIdx(null)}
+                                                                style={{ cursor: 'pointer' }}
+                                                            >
                                                                 <span className="donut-dot" style={{ background: s.color }} />
                                                                 <span className="donut-legend-name">
                                                                     {s.name.length > 16 ? s.name.slice(0, 16) + '…' : s.name}
                                                                 </span>
                                                                 <span className="donut-legend-pct">
-                                                                    {(s.pct * 100).toFixed(0)}%
+                                                                    {hoveredLegendIdx === i
+                                                                        ? `${s.amount.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} ₴` 
+                                                                        : `${(s.pct * 100).toFixed(0)}%`}
                                                                 </span>
                                                             </div>
                                                         ))}
@@ -613,28 +631,6 @@ function Analytics() {
                                                 <Bar dataKey="expense" name="expense" fill="#f87171" radius={[4, 4, 0, 0]} />
                                             </BarChart>
                                         </ResponsiveContainer>
-                                    </div>
-                                </div>
-
-                                {/* Топ категорій витрат */}
-                                <div className="analytics-card analytics-card--full analytics-card--bank">
-                                    <div className="card-icon">📈</div>
-                                    <h3 className="card-title">Топ-5 Категорій Витрат</h3>
-                                    <div className="categories-list">
-                                        {bankAnalytics.topCategories.map((cat, idx) => (
-                                            <div key={idx} className="category-item">
-                                                <div className="category-info">
-                                                    <span className="category-name">{cat.name}</span>
-                                                    <span className="category-amount">{cat.amount.toFixed(2)} UAH</span>
-                                                </div>
-                                                <div className="category-bar">
-                                                    <div
-                                                        className="category-progress"
-                                                        style={{ width: `${(cat.amount / bankAnalytics.expenses * 100)}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        ))}
                                     </div>
                                 </div>
 
