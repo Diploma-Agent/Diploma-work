@@ -217,58 +217,37 @@ class DeleteCryptoExchangeView(views.APIView):
 
 
 class TransactionListView(views.APIView):
-    """Список транзакцій з API банків та бірж"""
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         source = request.query_params.get('source', 'all')
-        days = int(request.query_params.get('days', 30))
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
 
-        all_transactions = []
+        # 1. Починаємо з усіх транзакцій користувача
+        queryset = Transaction.objects.filter(user=request.user)
 
-        try:
-            # Якщо source='all' або 'monobank', завантажуємо з Monobank
-            if source in ['all', 'monobank']:
-                try:
-                    bank = BankConnection.objects.get(
-                        user=request.user,
-                        bank_name='monobank',
-                        status='active'
-                    )
-                    monobank_transactions = MonobankService.get_transactions(
-                        bank.access_token,
-                        days=days
-                    )
-                    all_transactions.extend(monobank_transactions)
-                except BankConnection.DoesNotExist:
-                    pass
-
-            # Якщо source='all' або 'pumb', завантажуємо з ПУМБ
-            if source in ['all', 'pumb']:
-                try:
-                    bank = BankConnection.objects.get(
-                        user=request.user,
-                        bank_name='pumb',
-                        status='active'
-                    )
-                    # TODO: Додати сервіс для ПУМБ
-                    # pumb_transactions = PUMBService.get_transactions(bank.access_token, days=days)
-                    # all_transactions.extend(pumb_transactions)
-                except BankConnection.DoesNotExist:
-                    pass
-
-            # Сортуємо по даті (найновіші першими)
-            all_transactions.sort(
-                key=lambda x: x['transaction_date'], reverse=True)
-
-            return Response(all_transactions)
-
-        except Exception as e:
-            traceback.print_exc()
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
+        # 2. Якщо клієнт передав дати, фільтруємо по них
+        if date_from and date_to:
+            # Додаємо час до date_to, щоб захопити весь останній день включно
+            queryset = queryset.filter(
+                transaction_date__gte=date_from,
+                transaction_date__lte=f"{date_to}T23:59:59"
             )
+        # 3. Якщо дат немає, працює дефолтна логіка (останні 30 днів)
+        else:
+            days = int(request.query_params.get('days', 30))
+            limit_date = datetime.now() - timedelta(days=days)
+            queryset = queryset.filter(transaction_date__gte=limit_date)
+        
+        # 4. Фільтр по джерелу
+        if source != 'all':
+            queryset = queryset.filter(source=source)
+            
+        transactions = queryset.order_by('-transaction_date')
+        serializer = TransactionSerializer(transactions, many=True)
+        
+        return Response(serializer.data)
 
 
 class SyncView(views.APIView):
@@ -298,6 +277,8 @@ class SyncView(views.APIView):
 
         source = serializer.validated_data['source']
         days = serializer.validated_data['days']
+        date_from = serializer.validated_data.get('date_from')
+        date_to = serializer.validated_data.get('date_to')
 
         try:
             if source == 'monobank':
@@ -306,7 +287,7 @@ class SyncView(views.APIView):
                     bank_name='monobank'
                 )
                 service = MonobankService(request.user)
-                result = service.sync_transactions(connection, days=days)
+                result = service.sync_transactions(connection, days=days, date_from=date_from, date_to=date_to)
                 return Response(result)
 
             elif source == 'pumb':
@@ -783,6 +764,10 @@ class AIForecastView(views.APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
+        from django.core.cache import cache
+        import hashlib
+        import json
+        
         days = int(request.query_params.get('days', 30))
 
         try:
@@ -793,6 +778,16 @@ class AIForecastView(views.APIView):
             transactions = []
             if bank:
                 transactions = _get_uah_transactions(bank.access_token, days=30)
+            
+            # Створюємо хеш на основі транзакцій та днів, щоб перевірити, чи змінились дані
+            tx_light = [{'id': t.get('id'), 'amount': t.get('amount')} for t in transactions]
+            cache_string = json.dumps({'user': request.user.id, 'days': days, 'tx': tx_light}, sort_keys=True)
+            cache_hash = hashlib.md5(cache_string.encode('utf-8')).hexdigest()
+            cache_key = f'ai_forecast_{request.user.id}_{cache_hash}'
+            
+            cached_result = cache.get(cache_key)
+            if cached_result:
+                return Response(cached_result)
 
             result = ForecastAgent.forecast(transactions, days)
 
@@ -844,6 +839,9 @@ class AIForecastView(views.APIView):
                     model_used='linear_regression',
                     parameters=d,
                 )
+                
+                # Зберігаємо результат в кеш на 24 години (якщо транзакції не зміняться)
+                cache.set(cache_key, result, 60 * 60 * 24)
 
             return Response(result)
         except Exception as e:
@@ -923,7 +921,7 @@ class AIChatView(views.APIView):
                             'amount': round(t.get('amount', 0), 2),
                             'desc': t.get('description', '')[:30]
                         }
-                        for t in transactions[:150]
+                        for t in transactions
                     ]
                 }
 
@@ -934,8 +932,36 @@ class AIChatView(views.APIView):
                 .values('role', 'text')
             )
             db_history.reverse()  # хронологічний порядок
+            
+            def fetch_tx_callback(days=30, date_from=None, date_to=None):
+                # Спочатку шукаємо транзакції прямо в БД (вже збережені) під час синхронізації
+                qs = Transaction.objects.filter(user=request.user)
+                if date_from and date_to:
+                    qs = qs.filter(transaction_date__gte=date_from, transaction_date__lte=date_to)
+                else:
+                    limit_date = datetime.now() - timedelta(days=days)
+                    qs = qs.filter(transaction_date__gte=limit_date)
+                
+                saved_txs = qs.order_by('-transaction_date')
+                
+                if saved_txs.exists() and saved_txs.count() > 0:
+                    # Якщо у нас є завантажені транзакції в БД, повертаємо їх замість API банку
+                    return [
+                        {
+                            'transaction_date': t.transaction_date.isoformat(),
+                            'type': t.type,
+                            'amount': float(t.amount),
+                            'description': t.description,
+                        }
+                        for t in saved_txs
+                    ]
+                else: 
+                    # Лише якщо база порожня – пробуємо достукатись до API
+                    if bank:
+                        return _get_uah_transactions(bank.access_token, days=days) # API Моно поки не приймає date_from/date_to напряму тут, тож fallback на days
+                    return []
 
-            result = ChatAgent.chat(message, context, history=db_history)
+            result = ChatAgent.chat(message, context, history=db_history, fetch_transactions_cb=fetch_tx_callback)
 
             # Зберігаємо повідомлення користувача та відповідь агента в БД
             ChatMessage.objects.create(user=request.user, role='user', text=message)

@@ -3,10 +3,69 @@ from datetime import datetime, timedelta
 from django.core.cache import cache
 import time
 
-
 class MonobankService:
     BASE_URL = 'https://api.monobank.ua'
     CACHE_TIMEOUT = 60  # 1 хвилина в секундах
+
+    def __init__(self, user=None):
+        self.user = user
+
+    def sync_transactions(self, connection, days=30, date_from=None, date_to=None):
+        """Синхронізація транзакцій Монобанку з базою даних"""
+        from finance.models import Transaction
+        
+        # Передаємо дати далі
+        all_transactions = self.get_transactions(connection.access_token, days=days, date_from=date_from, date_to=date_to)
+        
+        added = 0
+        updated = 0
+        
+        for t in all_transactions:
+            source_id = t.get('id')
+            if not source_id:
+                continue
+                
+            amount_float = t.get('amount', 0)
+            
+            try:
+                tx_date = datetime.fromisoformat(t.get('transaction_date'))
+            except Exception:
+                continue
+            
+            existing = Transaction.objects.filter(
+                user=self.user, 
+                source='monobank', 
+                source_id=source_id
+            ).first()
+            
+            if existing:
+                existing.description = t.get('description', '')
+                existing.type = t.get('type')
+                existing.category_id = t.get('category_id')
+                existing.amount = amount_float
+                existing.raw_data = t
+                existing.save()
+                updated += 1
+            else:
+                Transaction.objects.create(
+                    user=self.user,
+                    source='monobank',
+                    source_id=source_id,
+                    type=t.get('type'),
+                    amount=amount_float,
+                    currency=t.get('currency', 'UAH'),
+                    description=t.get('description', ''),
+                    transaction_date=tx_date,
+                    raw_data=t
+                )
+                added += 1
+                
+        return {
+            "success": True,
+            "transactions_added": added,
+            "transactions_updated": updated,
+            "total_fetched": len(all_transactions)
+        }
 
     @staticmethod
     def validate_token(token):
@@ -39,9 +98,11 @@ class MonobankService:
             raise Exception(f'Помилка отримання інфо: {response.text}')
 
     @staticmethod
-    def get_transactions(token, days=30):
-        """Отримати транзакції з ВСІХ рахунків за останні N днів"""
-        cache_key = f'monobank_transactions_{token[:20]}_{days}'
+    def get_transactions(token, days=30, date_from=None, date_to=None):
+        """Отримати транзакції з ВСІХ рахунків за період"""
+        # Динамічний ключ кешу, щоб не переплутати вибірку за дні з вибіркою за дати
+        cache_date_str = f"{date_from}_{date_to}" if date_from and date_to else str(days)
+        cache_key = f'monobank_transactions_{token[:20]}_{cache_date_str}'
         cached_transactions = cache.get(cache_key)
 
         if cached_transactions:
@@ -51,21 +112,18 @@ class MonobankService:
         try:
             client_info = MonobankService.get_client_info(token)
             accounts = client_info.get('accounts', [])
-
-            # Збираємо всі IBAN власних рахунків для визначення внутрішніх переказів
             own_ibans = {acc.get('iban') for acc in accounts if acc.get('iban')}
 
             all_transactions = []
 
             for idx, account in enumerate(accounts):
                 account_id = account.get('id')
-
                 try:
                     if idx > 0:
                         time.sleep(1)
 
                     transactions = MonobankService._get_account_transactions(
-                        token, account_id, days, own_ibans
+                        token, account_id, days, date_from, date_to, own_ibans
                     )
                     all_transactions.extend(transactions)
                 except Exception as e:
@@ -83,31 +141,54 @@ class MonobankService:
             raise Exception(f'Помилка отримання транзакцій: {str(e)}')
 
     @staticmethod
-    def _get_account_transactions(token, account_id, days=30, own_ibans=None):
-        """Отримати транзакції для конкретного рахунку"""
-        cache_key = f'monobank_account_{token[:20]}_{account_id}_{days}'
+    def _get_account_transactions(token, account_id, days=30, date_from=None, date_to=None, own_ibans=None):
+        """Отримати транзакції для конкретного рахунку з розбивкою по 31 дню"""
+        cache_date_str = f"{date_from}_{date_to}" if date_from and date_to else str(days)
+        cache_key = f'monobank_account_{token[:20]}_{account_id}_{cache_date_str}'
         cached_data = cache.get(cache_key)
+        
         if cached_data:
             return cached_data
 
         headers = {'X-Token': token}
-        from_time = int((datetime.now() - timedelta(days=days)).timestamp())
-        to_time = int(datetime.now().timestamp())
-
-        url = f'{MonobankService.BASE_URL}/personal/statement/{account_id}/{from_time}/{to_time}'
-        response = requests.get(url, headers=headers)
-
-        if response.status_code == 200:
-            transactions = response.json()
-            formatted = MonobankService._format_transactions(transactions, account_id, own_ibans)
-            cache.set(cache_key, formatted, MonobankService.CACHE_TIMEOUT)
-            return formatted
-        elif response.status_code == 429:
-            print(f'Too many requests для рахунку {account_id}')
-            return []
+        
+        # Логіка визначення стартової та кінцевої дати
+        if date_from and date_to:
+            # datetime.min.time() = 00:00:00, datetime.max.time() = 23:59:59
+            start_date = datetime.combine(date_from, datetime.min.time())
+            end_date = datetime.combine(date_to, datetime.max.time())
         else:
-            print(f'Помилка {response.status_code} для рахунку {account_id}: {response.text}')
-            return []
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+        
+        all_raw_transactions = []
+        current_end = end_date
+        
+        while current_end > start_date:
+            current_start = max(start_date, current_end - timedelta(days=31))
+            
+            from_time = int(current_start.timestamp())
+            to_time = int(current_end.timestamp())
+
+            url = f'{MonobankService.BASE_URL}/personal/statement/{account_id}/{from_time}/{to_time}'
+            response = requests.get(url, headers=headers)
+
+            if response.status_code == 200:
+                chunk = response.json()
+                all_raw_transactions.extend(chunk)
+            elif response.status_code == 429:
+                print(f'Too many requests для рахунку {account_id}, перериваємо (сервер не зависатиме)')
+                break
+            else:
+                print(f'Помилка {response.status_code} для рахунку {account_id}: {response.text}')
+                break
+                
+            current_end = current_start
+            time.sleep(0.2)
+
+        formatted = MonobankService._format_transactions(all_raw_transactions, account_id, own_ibans)
+        cache.set(cache_key, formatted, MonobankService.CACHE_TIMEOUT)
+        return formatted
 
     @staticmethod
     def _format_transactions(transactions, account_id=None, own_ibans=None):

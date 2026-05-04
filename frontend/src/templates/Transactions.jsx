@@ -27,8 +27,8 @@ function Transactions() {
 	const navigate = useNavigate();
 
 	useEffect(() => {
-		fetchTransactions();
-	}, []);
+        fetchTransactions();
+    }, [filters.dateFrom, filters.dateTo]);
 
 	useEffect(() => {
 		applyFilters();
@@ -42,7 +42,13 @@ function Transactions() {
 				return;
 			}
 
-			const data = await financeService.getTransactions(token, filters.source, 30);
+			const data = await financeService.getTransactions(
+				token, 
+				filters.source, 
+				30, 
+				filters.dateFrom, 
+				filters.dateTo
+			);
 			console.log('Отримані транзакції:', data);
 			setTransactions(data);
 			setFilteredTransactions(data);

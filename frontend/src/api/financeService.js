@@ -133,16 +133,21 @@ export const financeService = {
 	},
 
 	// === ТРАНЗАКЦІЇ ===
-	async getTransactions(token, source = 'all', days = 30) {
-		const response = await fetch(`${API_URL}/transactions/?source=${source}&days=${days}`, {
-			headers: {
-				'Authorization': `Bearer ${token}`,
-			},
-		});
+	async getTransactions(token, source = 'all', days = 30, dateFrom = '', dateTo = '') {
+        // Формуємо базовий URL
+        let url = `${API_URL}/transactions/?source=${source}&days=${days}`;
+        
+        // Додаємо дати, якщо вони є
+        if (dateFrom) url += `&date_from=${dateFrom}`;
+        if (dateTo) url += `&date_to=${dateTo}`;
 
-		if (!response.ok) throw new Error('Помилка отримання транзакцій');
-		return response.json();
-	},
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (!response.ok) throw new Error('Помилка отримання транзакцій');
+        return response.json();
+    },
 
 	// === AI AGENTS ===
 	async aiChat(token, message) {

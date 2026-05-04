@@ -19,14 +19,19 @@ def get_crypto_price(symbol: str) -> str:
         return f"Не вдалося отримати ціну {symbol}."
 
 
-def analyze_user_finances() -> str:
+def analyze_user_finances(days: int = 30, date_from: str = None, date_to: str = None) -> str:
     """
-    Викликай цей інструмент, ТІЛЬКИ коли користувач просить ГЛИБОКО проаналізувати його фінанси,
-    дати фінансову пораду, порівняти доходи з витратами або зробити висновки.
-    НЕ використовуй цей інструмент для простих питань типу "Скільки я витратив?" або "Який мій баланс?" -
-    відповідай на такі питання самостійно, використовуючи наданий в системному промпті контекст!
+    Викликай цей інструмент, коли користувач просить ГЛИБОКО проаналізувати його фінанси,
+    дати фінансову пораду, порівняти доходи з витратами, зробити висновки АБО коли 
+    явно просить аналіз за певний період (наприклад, 'за останні 7 днів', 'тільки за січень').
+    Якщо користувач просить за абсолютний період (наприклад "за січень", "з 10 по 20 березня"), 
+    передавай параметри date_from та date_to у форматі YYYY-MM-DD.
+    Якщо вказані date_from та date_to, параметр days ігнорується, інакше використовується days (за замовчуванням 30).
+    НЕ використовуй цей інструмент для простих питань типу "Яка поточна ціна біткоїна?".
     """
-    return "ACTIVATE_FINANCIAL_ANALYST"
+    if date_from and date_to:
+        return f"ACTIVATE_FINANCIAL_ANALYST_DATES_{date_from}_{date_to}"
+    return f"ACTIVATE_FINANCIAL_ANALYST_{days}"
 
 
 class ChatAgent:
@@ -47,7 +52,7 @@ class ChatAgent:
     """
 
     @staticmethod
-    def chat(message: str, context: dict = None, history: list = None) -> dict:
+    def chat(message: str, context: dict = None, history: list = None, fetch_transactions_cb=None) -> dict:
         context_text = ""
         # Ми додаємо контекст завжди, щоб Gemini знав, які суми є
         if context:
@@ -107,15 +112,37 @@ class ChatAgent:
             elif fn_name == 'analyze_user_finances':
                 # Делегуємо роботу вузькоспеціалізованому агенту (AI Routing)
                 from .financial_analyst import FinancialAnalystAgent
+                
+                days_requested = int(args.get('days', 30))
+                date_from = args.get('date_from')
+                date_to = args.get('date_to')
+                transactions = context.get('recent_transactions', [])
+                
+                if fetch_transactions_cb and (date_from or days_requested != 30):
+                    try:
+                        # Fetch transactions using callback
+                        new_tx = fetch_transactions_cb(days=days_requested, date_from=date_from, date_to=date_to)
+                        if new_tx:
+                            transactions = [
+                                {
+                                    'date': t.get('transaction_date', '')[:10],
+                                    'type': t.get('type'),
+                                    'amount': round(t.get('amount', 0), 2),
+                                    'desc': t.get('description', '')[:30]
+                                }
+                                for t in new_tx
+                            ]
+                    except Exception as e:
+                        print(f"Error fetching specific period transactions: {e}")
 
                 # Формуємо промпт для Аналітика на основі сум та запиту користувача
                 analyst_prompt = (
                     f"Запит користувача: '{message}'.\n"
                     f"Його загальні фінансові суми: Баланс {context.get('balance', 0)} UAH.\n"
-                    f"Ось список його останніх транзакцій (до 150 шт): {context.get('recent_transactions', [])}\n\n"
+                    f"Ось список його транзакцій (за {days_requested} днів, {len(transactions)} шт): {transactions}\n\n"
                     f"ВАЖЛИВО: Відповідай МАКСИМАЛЬНО КОРОТКО і СУТО на питання для економії токенів. Нічого зайвого. "
                     f"Якщо він питає конкретну суму — ЗНАЙДИ транзакції, підсумуй їх і дай відповідь одним реченням. "
-                    f"Якщо просить аналіз чи пораду — дай дуже стислий висновок без довгих лекцій (максимум 2-3 речення)."
+                    f"Якщо просить аналіз чи пораду — дай дуже стислий висновок без довгих лекцій (максимум 4-5 речень)."
                 )
                 analyst_response = generate_with_retry(
                     contents=analyst_prompt,
