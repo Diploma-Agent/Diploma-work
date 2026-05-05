@@ -3,6 +3,8 @@ from google.oauth2 import service_account
 import os
 import time
 from django.conf import settings
+import faulthandler
+faulthandler.enable()
 
 # Шлях до credentials файлу
 credentials_file = os.environ.get('GOOGLE_CREDENTIALS') or getattr(
@@ -67,6 +69,11 @@ def generate_with_retry(contents, config=None, max_retries=3, system_instruction
             except Exception as e:
                 error_str = str(e).lower()
                 last_error = error_str
+
+                if '400' in error_str or 'invalidargument' in error_str:
+                    print(f"[Gemini] Критична помилка валідації (400) на моделі {model_name}: {error_str}")
+                    # Викидаємо ValueError миттєво, перериваючи всі цикли
+                    raise ValueError(f"Некоректний запит до AI: {error_str}")
 
                 if '429' in error_str or 'resource_exhausted' in error_str:
                     print(

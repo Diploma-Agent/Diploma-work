@@ -161,6 +161,7 @@ REST_FRAMEWORK = {
     ),
     # Додаємо наш обробник помилок
     'EXCEPTION_HANDLER': 'config.utils.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'finance.exceptions.custom_exception_handler',
 }
 
 # JWT Settings

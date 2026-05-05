@@ -1,6 +1,7 @@
 import requests
 from datetime import datetime, timedelta
 from django.core.cache import cache
+from django.utils import timezone
 import time
 
 class MonobankService:
@@ -29,6 +30,8 @@ class MonobankService:
             
             try:
                 tx_date = datetime.fromisoformat(t.get('transaction_date'))
+                if timezone.is_naive(tx_date):
+                    tx_date = timezone.make_aware(tx_date)
             except Exception:
                 continue
             
@@ -157,6 +160,9 @@ class MonobankService:
             # datetime.min.time() = 00:00:00, datetime.max.time() = 23:59:59
             start_date = datetime.combine(date_from, datetime.min.time())
             end_date = datetime.combine(date_to, datetime.max.time())
+            # Відсікаємо майбутнє
+            if end_date > datetime.now():
+                end_date = datetime.now()
         else:
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days)

@@ -1,3 +1,4 @@
+from annotated_types import doc
 from rest_framework import status, generics, views
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -8,6 +9,8 @@ import secrets
 import pytz
 from datetime import datetime, date, timedelta
 from django.conf import settings
+from pymongo import MongoClient
+import re
 
 from .models import (
     BankConnection, CryptoExchange, Transaction,
@@ -885,29 +888,32 @@ class AIChatView(views.APIView):
 
             context = {}
             if bank:
-                balance, _ = _get_real_balance(bank.access_token)
-                transactions = _get_uah_transactions(bank.access_token, days=30)
+                try:
+                    balance, _ = _get_real_balance(bank.access_token)
+                except Exception:
+                    balance = 0
 
-                now = datetime.now()
+                from django.utils import timezone
+                now = timezone.now()
+                thirty_days_ago = now - timedelta(days=30)
+                
+                # БЕРЕМО ДАНІ ВИКЛЮЧНО З ЛОКАЛЬНОЇ БАЗИ MongoDB
+                local_txs = Transaction.objects.filter(
+                    user=request.user, 
+                    transaction_date__gte=thirty_days_ago
+                ).order_by('-transaction_date')
+
                 current_month_income = 0
                 current_month_expenses = 0
 
-                for t in transactions:
-                    # Внутрішні перекази між рахунками не враховуємо
-                    if t.get('type') == 'transfer':
+                for t in local_txs:
+                    if t.type == 'transfer':
                         continue
-                    dt_str = t.get('transaction_date', '')
-                    if not dt_str:
-                        continue
-                    try:
-                        t_date = datetime.fromisoformat(dt_str)
-                        if t_date.year == now.year and t_date.month == now.month:
-                            if t['type'] == 'income':
-                                current_month_income += t['amount']
-                            elif t['type'] == 'expense':
-                                current_month_expenses += t['amount']
-                    except ValueError:
-                        pass
+                    if t.transaction_date.year == now.year and t.transaction_date.month == now.month:
+                        if t.type == 'income':
+                            current_month_income += float(str(t.amount))
+                        elif t.type == 'expense':
+                            current_month_expenses += float(str(t.amount))
 
                 context = {
                     'balance': round(balance, 2),
@@ -916,12 +922,12 @@ class AIChatView(views.APIView):
                     'month': now.strftime("%B %Y"),
                     'recent_transactions': [
                         {
-                            'date': t.get('transaction_date', '')[:10],
-                            'type': t.get('type'),
-                            'amount': round(t.get('amount', 0), 2),
-                            'desc': t.get('description', '')[:30]
+                            'date': t.transaction_date.isoformat()[:10],
+                            'type': t.type,
+                            'amount': round(float(str(t.amount)), 2),
+                            'desc': t.description[:30]
                         }
-                        for t in transactions
+                        for t in local_txs
                     ]
                 }
 
@@ -934,31 +940,94 @@ class AIChatView(views.APIView):
             db_history.reverse()  # хронологічний порядок
             
             def fetch_tx_callback(days=30, date_from=None, date_to=None):
-                # Спочатку шукаємо транзакції прямо в БД (вже збережені) під час синхронізації
-                qs = Transaction.objects.filter(user=request.user)
-                if date_from and date_to:
-                    qs = qs.filter(transaction_date__gte=date_from, transaction_date__lte=date_to)
-                else:
-                    limit_date = datetime.now() - timedelta(days=days)
-                    qs = qs.filter(transaction_date__gte=limit_date)
-                
-                saved_txs = qs.order_by('-transaction_date')
-                
-                if saved_txs.exists() and saved_txs.count() > 0:
-                    # Якщо у нас є завантажені транзакції в БД, повертаємо їх замість API банку
-                    return [
-                        {
-                            'transaction_date': t.transaction_date.isoformat(),
-                            'type': t.type,
-                            'amount': float(t.amount),
-                            'description': t.description,
-                        }
-                        for t in saved_txs
-                    ]
-                else: 
-                    # Лише якщо база порожня – пробуємо достукатись до API
-                    if bank:
-                        return _get_uah_transactions(bank.access_token, days=days) # API Моно поки не приймає date_from/date_to напряму тут, тож fallback на days
+                print(f"[fetch_tx_callback] days={days}, date_from={date_from}, date_to={date_to}")
+                def parse_date(date_str, is_end=False):
+                    try:
+                        return datetime.strptime(date_str, "%Y-%m-%d")
+                    except ValueError:
+                        try:
+                            dt = datetime.strptime(date_str, "%Y-%m")
+                            if is_end:
+                                if dt.month == 12:
+                                    return dt.replace(year=dt.year+1, month=1, day=1) - timedelta(days=1)
+                                return dt.replace(month=dt.month+1, day=1) - timedelta(days=1)
+                            return dt
+                        except ValueError:
+                            return datetime.now()
+
+                try:
+                    # Визначаємо діапазон дат
+                    if date_from and date_from not in ("None", "null") and \
+                    date_to and date_to not in ("None", "null"):
+                        if isinstance(date_from, str):
+                            dt_from = parse_date(date_from)
+                        else:
+                            dt_from = datetime.combine(date_from, datetime.min.time())
+                        
+                        if isinstance(date_to, str):
+                            dt_to = parse_date(date_to, is_end=True)
+                            dt_to = dt_to.replace(hour=23, minute=59, second=59)
+                        else:
+                            dt_to = datetime.combine(date_to, datetime.max.time())
+                    else:
+                        dt_to = datetime.now()
+                        dt_from = dt_to - timedelta(days=days)
+
+                    # Підключаємось до MongoDB напряму
+                    client = MongoClient(settings.MONGODB_URI)
+                    db = client[settings.MONGODB_DATABASE]
+                    collection = db['transactions']
+
+                    # transaction_date в MongoDB може зберігатись як рядок або datetime
+                    # Шукаємо обидва варіанти
+                    dt_from_str = dt_from.strftime("%Y-%m-%d")
+                    dt_to_str = dt_to.strftime("%Y-%m-%d")
+
+                    query = {
+                        'user_id': request.user.id,
+                        '$or': [
+                            # Якщо зберігається як datetime
+                            {
+                                'transaction_date': {
+                                    '$gte': dt_from,
+                                    '$lte': dt_to
+                                }
+                            },
+                            # Якщо зберігається як рядок ISO формату
+                            {
+                                'transaction_date': {
+                                    '$gte': dt_from_str,
+                                    '$lte': dt_to_str + 'T23:59:59'
+                                }
+                            }
+                        ]
+                    }
+
+                    cursor = collection.find(query).sort('transaction_date', -1)
+
+                    result = []
+                    for doc in cursor:
+                        tx_date = doc.get('transaction_date', datetime.now())
+                        if isinstance(tx_date, str):
+                            tx_date_iso = tx_date
+                        else:
+                            tx_date_iso = tx_date.isoformat()
+
+                        result.append({
+                            'transaction_date': tx_date_iso,
+                            'type': doc.get('type', ''),
+                            'amount': float(str(doc.get('amount', 0))),
+                            'description': doc.get('description', ''),
+                        })
+
+                    client.close()
+                    print(f"[PyMongo] Знайдено {len(result)} транзакцій за період {dt_from_str} - {dt_to_str}")
+                    return result
+
+                except Exception as e:
+                    print(f"Помилка PyMongo у fetch_tx_callback: {e}")
+                    import traceback
+                    print(traceback.format_exc())
                     return []
 
             result = ChatAgent.chat(message, context, history=db_history, fetch_transactions_cb=fetch_tx_callback)
@@ -973,8 +1042,22 @@ class AIChatView(views.APIView):
             )
 
             return Response(result)
+        
+        except ValueError as ve:
+            # Ловимо наші валідаційні помилки (наприклад, 400 від Gemini)
+            return Response({'error': str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+        except RuntimeError as re:
+            # Ловимо помилки після вичерпання спроб ретраю (наприклад, Gemini лежить)
+            return Response({'error': 'Штучний інтелект наразі перевантажений. Спробуйте пізніше.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            # Лобальний відловник для всіх інших неочікуваних помилок (щоб сервер не падав)
+            import traceback
+            full_trace = traceback.format_exc()
+            print(f"КРИТИЧНА ПОМИЛКА ЧАТУ:\n{full_trace}") # Виведе в консоль повний трейс для дебагу
+            return Response(
+                {'error': 'Виникла внутрішня помилка під час обробки вашого запиту.'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class ChatHistoryView(views.APIView):

@@ -1,7 +1,8 @@
 from .base import generate_with_retry
+from .financial_analyst import FinancialAnalystAgent
 import requests
 import json
-
+import time
 
 def get_crypto_price(symbol: str) -> str:
     """
@@ -63,22 +64,36 @@ class ChatAgent:
             context_text = (
                 f"[Фінансові дані користувача (ЗА ПОТОЧНИЙ МІСЯЦЬ): Баланс {context.get('balance', 0)} UAH, "
                 f"Доходи {context.get('income', 0)} UAH, Витрати {context.get('expenses', 0)} UAH]\n"
-                f"[Останні транзакції для довідок (за 30 днів): {tx_json}]\n"
-                f"Якщо користувач питає статистику по певних днях або категоріях/місцях "
-                f"(наприклад, 'за цей тиждень', 'сьогодні', 'у Сільпо'), шукай відповідь САМОСТІЙНО "
-                f"серед наданого вище списку 'Останні транзакції'."
+                f"[Останні транзакції для довідок (ТІЛЬКИ за останні 30 днів): {tx_json}]\n"
+                f"УВАГА: Наданий список містить транзакції ВИКЛЮЧНО за останні 30 днів. "
+                f"Якщо користувач питає про період, що був РАНІШЕ ніж ці 30 днів (наприклад, 'за січень 2026', 'у грудні'), "
+                f"ти ОБОВ'ЯЗКОВО ПОВИНЕН викликати інструмент analyze_user_finances, передавши date_from та date_to у форматі YYYY-MM-DD. "
+                f"Шукай відповідь самостійно у наданому вище списку ТІЛЬКИ якщо питання стосується поточного місяця чи останніх 30 днів."
             )
 
         # Формуємо історію
         contents = []
         if history:
-            # 10 останніх повідомлень для контексту
-            recent_history = history[-10:]
-            for msg in recent_history:
-                contents.append({
-                    'role': msg['role'],
-                    'parts': [{'text': msg['text']}]
-                })
+            valid_history = []
+            expected_role = 'user'
+            
+            for msg in history[-10:]:
+                role = msg['role']
+                if role == expected_role:
+                    valid_history.append({
+                        'role': role,
+                        'parts': [{'text': msg['text']}]
+                    })
+                    expected_role = 'model' if role == 'user' else 'user'
+                elif valid_history:
+                    # Якщо ролі дублюються (напр. два 'user' підряд), об'єднуємо їх текст
+                    valid_history[-1]['parts'][0]['text'] += f"\n{msg['text']}"
+
+            # Перед новим повідомленням 'user' обов'язково має бути 'model'
+            if valid_history and valid_history[-1]['role'] == 'user':
+                valid_history.pop()
+                
+            contents.extend(valid_history)
 
         current = f"{context_text}\nКористувач: {message}" if context_text else message
         contents.append({
@@ -111,11 +126,22 @@ class ChatAgent:
 
             elif fn_name == 'analyze_user_finances':
                 # Делегуємо роботу вузькоспеціалізованому агенту (AI Routing)
-                from .financial_analyst import FinancialAnalystAgent
                 
-                days_requested = int(args.get('days', 30))
+                days_raw = args.get('days')
+                try:
+                    days_requested = int(float(days_raw)) if days_raw is not None else 30
+                except (ValueError, TypeError):
+                    days_requested = 30
+
                 date_from = args.get('date_from')
                 date_to = args.get('date_to')
+                print(f"[Gemini args] date_from={date_from}, date_to={date_to}, days={days_raw}")
+                
+                if date_from == "None" or date_from == "null":
+                    date_from = None
+                if date_to == "None" or date_to == "null":
+                    date_to = None
+
                 transactions = context.get('recent_transactions', [])
                 
                 if fetch_transactions_cb and (date_from or days_requested != 30):
@@ -155,7 +181,10 @@ class ChatAgent:
 
             # Якщо викликався get_crypto_price, треба зробити другий запит, щоб Gemini відформатував відповідь
             # Фіксуємо виклик функції
-            contents.append(response.candidates[0].content)
+            contents.append({
+                'role': 'model',
+                'parts': [{'text': str(part.function_call)}]
+            })
             contents.append({
                 'role': 'user',
                 'parts': [{'text': f"Результат виклику {fn_name}: {tool_result}. Сформуй природну відповідь користувачу на основі цих даних."}]
