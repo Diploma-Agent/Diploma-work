@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/profileStyles.css';
 import { authService } from '../api/authService';
@@ -32,12 +32,7 @@ function Profile() {
 	const [bankForm, setBankForm] = useState({ name: '', type: 'monobank', apiKey: '' });
 	const navigate = useNavigate();
 
-	useEffect(() => {
-		fetchUserData();
-		loadBanks();
-	}, []);
-
-	const fetchUserData = async () => {
+	const fetchUserData = useCallback(async () => {
 		try {
 			const token = localStorage.getItem('token');
 			if (!token) {
@@ -69,9 +64,9 @@ function Profile() {
 				setTimeout(() => navigate('/login'), 2000);
 			}
 		}
-	};
+	}, [navigate]);
 
-	const loadBanks = async () => {
+	const loadBanks = useCallback(async () => {
 		try {
 			const token = localStorage.getItem('token');
 			const data = await financeService.getBanks(token);
@@ -79,7 +74,12 @@ function Profile() {
 		} catch (err) {
 			console.error('Помилка завантаження банків:', err);
 		}
-	};
+	}, []);
+
+	useEffect(() => {
+		fetchUserData();
+		loadBanks();
+	}, [fetchUserData, loadBanks]);
 
 	const onChange = (e) => {
 		const { name, value } = e.target;

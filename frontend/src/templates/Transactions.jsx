@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { financeService } from '../api/financeService';
@@ -16,25 +16,9 @@ function Transactions() {
 		dateFrom: '',
 		dateTo: '',
 	});
-	const [showAddModal, setShowAddModal] = useState(false);
-	const [newTransaction, setNewTransaction] = useState({
-		type: 'expense',
-		amount: '',
-		currency: 'UAH',
-		description: '',
-		date: new Date().toISOString().split('T')[0],
-	});
 	const navigate = useNavigate();
 
-	useEffect(() => {
-        fetchTransactions();
-    }, [filters.dateFrom, filters.dateTo]);
-
-	useEffect(() => {
-		applyFilters();
-	}, [transactions, filters]);
-
-	const fetchTransactions = async () => {
+	const fetchTransactions = useCallback(async () => {
 		try {
 			const token = localStorage.getItem('token');
 			if (!token) {
@@ -58,9 +42,9 @@ function Transactions() {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [navigate, filters.source, filters.dateFrom, filters.dateTo]);
 
-	const applyFilters = () => {
+	const applyFilters = useCallback(() => {
 		let filtered = [...transactions];
 
 		if (filters.search) {
@@ -91,41 +75,18 @@ function Transactions() {
 		}
 
 		setFilteredTransactions(filtered);
-	};
+	}, [transactions, filters]);
+
+	useEffect(() => {
+        fetchTransactions();
+    }, [fetchTransactions]);
+
+	useEffect(() => {
+		applyFilters();
+	}, [applyFilters]);
 
 	const handleFilterChange = (e) => {
 		setFilters({ ...filters, [e.target.name]: e.target.value });
-	};
-
-	const handleAddTransaction = async (e) => {
-		e.preventDefault();
-		try {
-			const token = localStorage.getItem('token');
-			const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-			const response = await fetch(`${API_BASE}/finance/transactions/`, {
-				method: 'POST',
-				headers: {
-					'Authorization': `Bearer ${token}`,
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					type: newTransaction.type,
-					amount: parseFloat(newTransaction.amount),
-					currency: newTransaction.currency,
-					description: newTransaction.description,
-					transaction_date: new Date(newTransaction.date).toISOString(),
-					source: 'manual',
-				}),
-			});
-
-			if (!response.ok) throw new Error('Помилка додавання транзакції');
-
-			setShowAddModal(false);
-			setNewTransaction({ type: 'expense', amount: '', currency: 'UAH', description: '', date: new Date().toISOString().split('T')[0] });
-			fetchTransactions();
-		} catch (err) {
-			setError(err.message);
-		}
 	};
 
 	const getTransactionIcon = (type) => {

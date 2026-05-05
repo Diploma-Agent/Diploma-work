@@ -8,7 +8,7 @@ import Analytics from './templates/Analytics';
 import Transactions from './templates/Transactions';
 import ChatComponent from './components/ChatComponent';
 
-const AUTH_ROUTES = ['/login', '/register'];
+const AUTH_ROUTES = ['/login', '/register', '/'];
 
 const PrivateRoute = ({ children }) => {
 	const isAuthenticated = localStorage.getItem('token');
@@ -17,7 +17,8 @@ const PrivateRoute = ({ children }) => {
 
 function AppContent() {
 	const location = useLocation();
-	const showChat = !AUTH_ROUTES.includes(location.pathname);
+	const isAuthenticated = !!localStorage.getItem('token');
+	const showChat = isAuthenticated && !AUTH_ROUTES.includes(location.pathname);
 
 	return (
 		<>
