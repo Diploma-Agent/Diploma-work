@@ -26,6 +26,21 @@ def health_check(request):
     """Render.com health check endpoint — відповідає 200 без авторизації."""
     return JsonResponse({'status': 'ok'})
 
+
+def root_view(request):
+    """Коренева сторінка — інформація про API."""
+    return JsonResponse({
+        'name': 'FinanceApp API',
+        'version': '1.0',
+        'status': 'running',
+        'endpoints': {
+            'auth': '/api/auth/',
+            'finance': '/api/finance/',
+            'health': '/api/health/',
+            'docs': '/swagger/',
+        }
+    })
+
 # Swagger/OpenAPI schema
 schema_view = get_schema_view(
     openapi.Info(
@@ -41,6 +56,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    path('', root_view, name='root'),
     path('admin/', admin.site.urls),
 
     # Health check (Render.com, no auth required)
