@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { financeService } from '../api/financeService';
+import { useFinance } from '../context/FinanceContext';
 import '../styles/transactionsStyles.css';
 
 function Transactions() {
@@ -17,32 +17,28 @@ function Transactions() {
 		dateTo: '',
 	});
 	const navigate = useNavigate();
+	const { getTransactions } = useFinance();
 
 	const fetchTransactions = useCallback(async () => {
 		try {
 			const token = localStorage.getItem('token');
-			if (!token) {
-				navigate('/login');
-				return;
-			}
+			if (!token) { navigate('/login'); return; }
 
-			const data = await financeService.getTransactions(
-				token, 
-				filters.source, 
-				30, 
-				filters.dateFrom, 
+			// Дані з кешу або API (повторний перехід = миттєво)
+			const data = await getTransactions(
+				filters.source,
+				30,
+				filters.dateFrom,
 				filters.dateTo
 			);
-			console.log('Отримані транзакції:', data);
 			setTransactions(data);
 			setFilteredTransactions(data);
 		} catch (err) {
-			console.error('Помилка завантаження транзакцій:', err);
 			setError(err.message || 'Помилка завантаження транзакцій');
 		} finally {
 			setLoading(false);
 		}
-	}, [navigate, filters.source, filters.dateFrom, filters.dateTo]);
+	}, [navigate, getTransactions, filters.source, filters.dateFrom, filters.dateTo]);
 
 	const applyFilters = useCallback(() => {
 		let filtered = [...transactions];

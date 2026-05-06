@@ -40,19 +40,6 @@ function CreateProfile() {
 
 		try {
 			setLoading(true);
-			const token = localStorage.getItem('token');
-			
-			// Зберігаємо додаткову інформацію профілю
-			const profileData = JSON.parse(localStorage.getItem('profileData') || '{}');
-			profileData[token] = {
-				...form,
-				completedAt: new Date().toISOString()
-			};
-			localStorage.setItem('profileData', JSON.stringify(profileData));
-			
-			// Позначаємо, що профіль налаштовано
-			localStorage.setItem('profileCompleted', 'true');
-			
 			navigate('/profile');
 		} catch (err) {
 			setError(err.message || 'Сталася помилка.');
@@ -62,7 +49,6 @@ function CreateProfile() {
 	};
 
 	const skipSetup = () => {
-		localStorage.setItem('profileCompleted', 'true');
 		navigate('/profile');
 	};
 

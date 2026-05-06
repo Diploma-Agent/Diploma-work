@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { authService } from '../api/authService';
-import { financeService } from '../api/financeService';
+import { useFinance } from '../context/FinanceContext';
 import '../styles/dashboardStyles.css';
 
 function calcMonthStats(txList) {
@@ -24,6 +24,7 @@ function calcMonthStats(txList) {
 
 function Dashboard() {
 	const navigate = useNavigate();
+	const { getBalance, getTransactions } = useFinance();
 	const [userName, setUserName] = useState('');
 	const [balance, setBalance] = useState(null);
 	const [stats, setStats] = useState(null);
@@ -35,23 +36,23 @@ function Dashboard() {
 		const token = localStorage.getItem('token');
 		if (!token) { navigate('/login'); return; }
 
-		// Ім'я з кешу, потім з API
+		// Ім'я профілю
 		const saved = JSON.parse(localStorage.getItem('user_profile') || '{}');
 		if (saved.first_name) setUserName(saved.first_name);
 		authService.getMe(token)
 			.then(u => setUserName(u.first_name || u.username || 'Користувачу'))
 			.catch(() => {});
 
-		// Баланс
-		financeService.getBankAnalytics(token)
+		// Баланс — з кешу або API
+		getBalance()
 			.then(res => {
 				if (res) setBalance(res.balance ?? res.total_balance ?? 0);
 			})
 			.catch(() => setBalance(0))
 			.finally(() => setLoadingBalance(false));
 
-		// Транзакції + статистика
-		financeService.getTransactions(token, 'all', 31)
+		// Транзакції + статистика — з кешу або API
+		getTransactions('all', 31)
 			.then(res => {
 				const list = Array.isArray(res) ? res : (Array.isArray(res?.transactions) ? res.transactions : []);
 				setStats(calcMonthStats(list));
@@ -59,7 +60,7 @@ function Dashboard() {
 			})
 			.catch(() => setStats({ income: 0, expense: 0 }))
 			.finally(() => setLoadingTx(false));
-	}, [navigate]);
+	}, [navigate, getBalance, getTransactions]);
 
 	const fmt = (n) => (Number(n) || 0).toLocaleString('uk-UA');
 

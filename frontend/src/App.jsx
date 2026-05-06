@@ -8,6 +8,7 @@ import Analytics from './templates/Analytics';
 import Transactions from './templates/Transactions';
 import CreateProfile from './templates/CreateProfile';
 import ChatComponent from './components/ChatComponent';
+import { FinanceProvider } from './context/FinanceContext';
 
 const AUTH_ROUTES = ['/login', '/register', '/create-profile'];
 
@@ -41,7 +42,9 @@ function AppContent() {
 function App() {
 	return (
 		<Router>
-			<AppContent />
+			<FinanceProvider>
+				<AppContent />
+			</FinanceProvider>
 		</Router>
 	);
 }
