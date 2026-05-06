@@ -1,0 +1,32 @@
+# Фронтенд — не потрібен у Docker-образі бекенду
+frontend/
+
+# Середовище
+backend/.env
+backend/.env.*
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Google credentials (передаються через env var GOOGLE_CREDENTIALS_B64)
+backend/diploma-*.json
+backend/*-credentials.json
+
+# Статика (генерується в контейнері через collectstatic)
+backend/staticfiles/
+
+# Git та IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+**/*.swp
+
+# Тести
+backend/pytest.ini
+backend/.pytest_cache/
+backend/htmlcov/
+backend/.coverage
+
+# Logs
+**/*.log

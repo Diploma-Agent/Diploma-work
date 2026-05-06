@@ -1,24 +1,23 @@
-# ── Stage: production image ──────────────────────────────────────────────────
+# ── Production image ──────────────────────────────────────────────────────────
+# Build context = корінь репозиторію (render.yaml не передає dockerContext).
+# Всі шляхи COPY — відносно кореня репо.
 FROM python:3.11-slim
 
-# Системні залежності
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
+RUN apt-get update && apt-get install -y --no-install-recommends gcc \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Встановлюємо залежності окремим шаром (кешується при змінах коду)
-COPY requirements.txt .
+# Залежності — окремий шар (кешується при змінах коду, але не requirements)
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копіюємо код (крім виключень з .dockerignore)
-COPY . .
+# Код бекенду
+COPY backend/ .
 
 # Права на entrypoint
 RUN chmod +x /app/entrypoint.sh
 
-# Порт Gunicorn
 EXPOSE 8000
 
 ENTRYPOINT ["/app/entrypoint.sh"]
