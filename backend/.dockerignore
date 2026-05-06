@@ -1,0 +1,35 @@
+# Середовище
+.env
+.env.*
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Google credentials (передаються через env var GOOGLE_CREDENTIALS_B64)
+diploma-*.json
+*-credentials.json
+*-service-account*.json
+
+# Статика (генерується в контейнері через collectstatic)
+staticfiles/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Тести
+pytest.ini
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Локальна розробка
+*.log

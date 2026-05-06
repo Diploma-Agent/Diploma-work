@@ -1,0 +1,132 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Render.com Blueprint — FinanceApp Diploma
+#
+# Сервіси:
+#   diploma-backend  — Django + Gunicorn (Web Service, Docker)
+#   diploma-celery   — Celery worker (Worker Service, той самий Docker image)
+#   diploma-frontend — React/Vite (Static Site, без контейнера)
+#   diploma-redis    — Redis (Render managed, free tier)
+#
+# Перед деплоєм встановіть у Render Dashboard (або CLI) такі змінні:
+#   MONGODB_URI           — рядок підключення MongoDB Atlas
+#   GOOGLE_CREDENTIALS_B64 — base64 від JSON сервісного акаунта Google
+#   CORS_ALLOWED_ORIGINS  — URL вашого фронтенду, напр. https://diploma-frontend.onrender.com
+#   VITE_API_BASE_URL     — URL бекенду, напр. https://diploma-backend.onrender.com
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Backend (Django + Gunicorn) ────────────────────────────────────────────
+  - type: web
+    name: diploma-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/health/
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true           # Render генерує безпечний ключ автоматично
+
+      - key: DEBUG
+        value: "False"
+
+      # Дозволяємо Render-домен і будь-який кастомний домен через кому
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+
+      # MongoDB Atlas — встановити вручну в Dashboard
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DATABASE
+        value: diploma_db
+
+      # Redis — автоматично береться з diploma-redis
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: diploma-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: diploma-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: diploma-redis
+          property: connectionString
+
+      # Google Service Account JSON у base64
+      # Отримати: base64 -i diploma-*.json | tr -d '\n'
+      - key: GOOGLE_CREDENTIALS_B64
+        sync: false
+
+      # URL фронтенду для CORS (напр. https://diploma-frontend.onrender.com)
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
+  # ── Celery Worker ──────────────────────────────────────────────────────────
+  - type: worker
+    name: diploma-celery
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    # Перевизначаємо CMD контейнера на Celery worker
+    dockerCommand: celery -A config worker --loglevel=info --concurrency=1
+    envVars:
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: diploma-backend
+          envVarKey: SECRET_KEY
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DATABASE
+        value: diploma_db
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: diploma-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: diploma-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: diploma-redis
+          property: connectionString
+      - key: GOOGLE_CREDENTIALS_B64
+        sync: false
+
+  # ── Frontend (React/Vite — Static Site) ───────────────────────────────────
+  - type: web
+    name: diploma-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    # SPA routing: всі шляхи → index.html
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # URL бекенду для fetch-запитів у production
+      # Напр.: https://diploma-backend.onrender.com
+      - key: VITE_API_BASE_URL
+        sync: false
+
+# ── Redis (Managed) ───────────────────────────────────────────────────────────
+databases:
+  - name: diploma-redis
+    plan: free

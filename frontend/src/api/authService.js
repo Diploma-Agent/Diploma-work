@@ -1,4 +1,7 @@
-const API_URL = 'http://localhost:8000/api/auth';
+// В dev — Vite proxy перенаправляє /api/* → localhost:8000
+// В production — VITE_API_BASE_URL вказує на Render backend URL
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const API_URL = `${API_BASE}/api/auth`;
 
 export const authService = {
 	async register(data) {

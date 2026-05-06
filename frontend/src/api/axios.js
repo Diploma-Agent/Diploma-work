@@ -1,10 +1,8 @@
 import axios from 'axios';
 
-// Автоматично визначає baseURL залежно від середовища
-// В dev режимі використовуємо proxy, в production - повний URL
-const baseURL = import.meta.env.MODE === 'production' 
-  ? window.location.origin 
-  : ''; // Порожній рядок для використання proxy в dev режимі
+// В dev — порожній рядок: Vite proxy перенаправляє /api/* → localhost:8000
+// В production — VITE_API_BASE_URL вказує на Render backend URL
+const baseURL = import.meta.env.VITE_API_BASE_URL || '';
 
 const instance = axios.create({
   baseURL,
