@@ -25,8 +25,17 @@ function Analytics() {
 
     // --- State для Банку ---
     const [bankAnalytics, setBankAnalytics] = useState(null);
+    const [bankLoading, setBankLoading] = useState(false);
     const [forecastData, setForecastData] = useState(null);
     const [forecastLoading, setForecastLoading] = useState(false);
+
+    // --- Вибір місяця/року ---
+    const now = new Date();
+    const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+    const [selectedYear, setSelectedYear]   = useState(now.getFullYear());
+
+    const MONTHS_UK = ['Січень','Лютий','Березень','Квітень','Травень','Червень',
+                       'Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
 
     // --- Загальний State ---
     const [loading, setLoading] = useState(true);
@@ -35,56 +44,78 @@ function Analytics() {
     const [hoveredSliceIdx, setHoveredSliceIdx] = useState(null);
     const [hoveredLegendIdx, setHoveredLegendIdx] = useState(null);
 
-    // 1. Завантаження списку бірж та банківських даних при старті
+    // Завантаження банківських даних для вибраного місяця
+    const loadBankDataForPeriod = async (month, year) => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        setBankLoading(true);
+        try {
+            const today = new Date();
+            const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
+
+            let bankData;
+            if (isCurrentMonth) {
+                // Поточний місяць — беремо через analytics endpoint (містить реальний баланс)
+                bankData = await financeService.getBankAnalytics(token);
+            } else {
+                // Минулий місяць — беремо транзакції за конкретний діапазон + поточний баланс
+                const mm       = String(month + 1).padStart(2, '0');
+                const lastDay  = new Date(year, month + 1, 0).getDate();
+                const dateFrom = `${year}-${mm}-01`;
+                const dateTo   = `${year}-${mm}-${String(lastDay).padStart(2, '0')}`;
+
+                const [analyticsData, txList] = await Promise.all([
+                    financeService.getBankAnalytics(token).catch(() => ({ balance: 0 })),
+                    financeService.getTransactions(token, 'all', 31, dateFrom, dateTo)
+                ]);
+
+                const transactions = Array.isArray(txList)
+                    ? txList
+                    : (txList?.transactions || []);
+
+                bankData = { balance: analyticsData.balance, transactions };
+            }
+
+            setBankAnalytics(calculateBankAnalytics(bankData, month, year));
+        } catch (err) {
+            console.error('Помилка завантаження банківської аналітики:', err);
+        } finally {
+            setBankLoading(false);
+        }
+    };
+
+    // 1. Початкове завантаження
     useEffect(() => {
         const initData = async () => {
             const token = localStorage.getItem('token');
-            if (!token) {
-                navigate('/login');
-                return;
-            }
+            if (!token) { navigate('/login'); return; }
 
             setLoading(true);
             setError('');
 
             const fetchExchanges = financeService.getExchanges(token)
-                .then(exchangesList => {
-                    setExchanges(exchangesList);
-                    if (exchangesList && exchangesList.length > 0) {
-                        setSelectedExchange(exchangesList[0].exchange_name);
-                    } else {
-                        setExchanges([]);
-                    }
+                .then(list => {
+                    setExchanges(list);
+                    if (list?.length > 0) setSelectedExchange(list[0].exchange_name);
                 })
-                .catch(err => {
-                    console.error('Помилка завантаження списку бірж:', err);
-                    setError('Не вдалося завантажити список бірж');
-                });
-
-            const fetchBankData = financeService.getBankAnalytics(token)
-                .then(bankData => {
-                    const analytics = calculateBankAnalytics(bankData);
-                    setBankAnalytics(analytics);
-                })
-                .catch(err => {
-                    console.error('Помилка завантаження банківської аналітики:', err);
-                    setError(prev => prev ? `${prev}. Не вдалося завантажити банківські дані` : 'Не вдалося завантажити банківські дані');
-                });
+                .catch(() => setError('Не вдалося завантажити список бірж'));
 
             setForecastLoading(true);
             const fetchForecast = financeService.aiForecast(token, 30)
                 .then(data => setForecastData(data))
-                .catch(err => console.error('Помилка завантаження AI прогнозу:', err))
+                .catch(err => console.error('Помилка AI прогнозу:', err))
                 .finally(() => setForecastLoading(false));
 
-            // Паралельне завантаження
-            await Promise.all([fetchExchanges, fetchBankData, fetchForecast]);
-
+            await Promise.all([fetchExchanges, loadBankDataForPeriod(selectedMonth, selectedYear), fetchForecast]);
             setLoading(false);
         };
-
         initData();
     }, [navigate]);
+
+    // 2. Перезавантаження банку при зміні місяця/року
+    useEffect(() => {
+        if (!loading) loadBankDataForPeriod(selectedMonth, selectedYear);
+    }, [selectedMonth, selectedYear]);
 
     // 2. Завантаження даних конкретної біржі при зміні вибору
     useEffect(() => {
@@ -126,74 +157,67 @@ function Analytics() {
         fetchExchangeData();
     }, [selectedExchange]);
 
-    // --- Логіка розрахунку банківської аналітики (без змін) ---
-    const calculateBankAnalytics = (bankData) => {
+    // --- Логіка розрахунку банківської аналітики ---
+    const calculateBankAnalytics = (bankData, month, year) => {
         if (!bankData || !bankData.transactions) return null;
 
-        const now = new Date();
-        // Встановлюємо дату на початок поточного місяця (1 число)
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const today = new Date();
+        const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
 
-        const monthTransactions = bankData.transactions.filter(t =>
-            t.type !== 'transfer' && new Date(t.transaction_date) >= startOfMonth
-        );
+        const startOfPeriod = new Date(year, month, 1);
+        const endOfPeriod   = new Date(year, month + 1, 0, 23, 59, 59);
 
-        const income = monthTransactions
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+        const monthTransactions = bankData.transactions.filter(t => {
+            if (t.type === 'transfer') return false;
+            const d = new Date(t.transaction_date);
+            return d >= startOfPeriod && d <= endOfPeriod;
+        });
 
-        const expenses = monthTransactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+        const income   = monthTransactions.filter(t => t.type === 'income')
+            .reduce((s, t) => s + parseFloat(t.amount), 0);
+        const expenses = monthTransactions.filter(t => t.type === 'expense')
+            .reduce((s, t) => s + parseFloat(t.amount), 0);
 
-        // Підготовка даних для графіку витрат та надходжень по днях
+        // Кількість днів для графіку: для поточного — до сьогодні, для інших — весь місяць
+        const daysToShow = isCurrentMonth
+            ? today.getDate()
+            : new Date(year, month + 1, 0).getDate();
+
         const chartData = [];
-        const daysInMonth = now.getDate(); // Показуємо дні до сьогодні
-
-        for (let i = 1; i <= daysInMonth; i++) {
+        for (let i = 1; i <= daysToShow; i++) {
             chartData.push({ name: `${i}`, expense: 0, income: 0 });
         }
-
         monthTransactions.forEach(t => {
             const day = new Date(t.transaction_date).getDate();
-            // Упевнимося, що транзакція потрапляє в діапазон
-            if (day <= daysInMonth && chartData[day - 1]) {
-                if (t.type === 'expense') {
-                    chartData[day - 1].expense += parseFloat(t.amount);
-                } else if (t.type === 'income') {
-                    chartData[day - 1].income += parseFloat(t.amount);
-                }
+            if (day >= 1 && day <= daysToShow && chartData[day - 1]) {
+                if (t.type === 'expense') chartData[day - 1].expense += parseFloat(t.amount);
+                else if (t.type === 'income') chartData[day - 1].income += parseFloat(t.amount);
             }
         });
 
         const categoryExpenses = {};
-        monthTransactions
-            .filter(t => t.type === 'expense')
-            .forEach(t => {
-                const category = t.counterparty || 'Інше';
-                categoryExpenses[category] = (categoryExpenses[category] || 0) + parseFloat(t.amount);
-            });
-
+        monthTransactions.filter(t => t.type === 'expense').forEach(t => {
+            // counterparty може бути порожнім для старих записів у БД — беремо першу строку description
+            const raw = t.counterparty || (t.description ? t.description.split('\n')[0] : '') || 'Інше';
+            const cat = raw.trim() || 'Інше';
+            categoryExpenses[cat] = (categoryExpenses[cat] || 0) + parseFloat(t.amount);
+        });
         const topCategories = Object.entries(categoryExpenses)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
+            .sort((a, b) => b[1] - a[1]).slice(0, 5)
             .map(([name, amount]) => ({ name, amount }));
 
-        const averageDailyExpenses = expenses / 30;
-        const forecastBalance = bankData.balance - (averageDailyExpenses * 30);
-        const safeAmount = bankData.balance * 0.3;
-        const recommendedInvestment = Math.max(0, safeAmount);
+        const averageDailyExpenses = expenses / daysToShow;
+        const forecastBalance      = bankData.balance - (averageDailyExpenses * 30);
+        const safeAmount           = bankData.balance * 0.3;
 
         return {
             balance: bankData.balance,
-            income,
-            expenses,
+            income, expenses,
             netIncome: income - expenses,
-            topCategories,
-            chartData,
+            topCategories, chartData,
             averageDailyExpenses: averageDailyExpenses.toFixed(2),
             forecastBalance: forecastBalance.toFixed(2),
-            recommendedInvestment: recommendedInvestment.toFixed(2),
+            recommendedInvestment: Math.max(0, safeAmount).toFixed(2),
             savingsRate: income > 0 ? ((income - expenses) / income * 100).toFixed(1) : 0
         };
     };
@@ -388,9 +412,36 @@ function Analytics() {
                         {/* Секція Банку */}
                         <div className="analytics-header analytics-header--bank">
                             <h1 className="analytics-title">🏦 Аналітика Банку</h1>
+                            <div className="month-picker">
+                                <button
+                                    className="month-nav-btn"
+                                    onClick={() => {
+                                        if (selectedMonth === 0) { setSelectedMonth(11); setSelectedYear(y => y - 1); }
+                                        else setSelectedMonth(m => m - 1);
+                                    }}
+                                >‹</button>
+                                <span className="month-label">
+                                    {MONTHS_UK[selectedMonth]} {selectedYear}
+                                </span>
+                                <button
+                                    className="month-nav-btn"
+                                    disabled={selectedMonth === now.getMonth() && selectedYear === now.getFullYear()}
+                                    onClick={() => {
+                                        if (selectedMonth === 11) { setSelectedMonth(0); setSelectedYear(y => y + 1); }
+                                        else setSelectedMonth(m => m + 1);
+                                    }}
+                                >›</button>
+                            </div>
                         </div>
 
-                        {bankAnalytics ? (
+                        {bankLoading ? (
+                            <div className="analytics-card analytics-card--full analytics-card--bank" style={{ textAlign: 'center', padding: '40px' }}>
+                                <div className="spinner"></div>
+                                <p style={{ color: '#94a3b8', marginTop: '12px' }}>
+                                    Завантаження даних за {MONTHS_UK[selectedMonth]} {selectedYear}...
+                                </p>
+                            </div>
+                        ) : bankAnalytics ? (
                             <>
                                 <div className="analytics-grid">
                                     {/* Поточний баланс */}
@@ -488,6 +539,15 @@ function Analytics() {
                                                                     {forecastData.data.accuracy.expenses.mae ?? '—'}
                                                                 </div>
                                                             </div>
+                                                            {forecastData.data.accuracy.expenses.train_weeks != null && (
+                                                                <div className="accuracy-item">
+                                                                    <div className="accuracy-label">Тижнів даних</div>
+                                                                    <div className="accuracy-metric">
+                                                                        {(forecastData.data.accuracy.expenses.train_weeks ?? 0) +
+                                                                         (forecastData.data.accuracy.expenses.test_weeks ?? 0)}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )}
@@ -640,10 +700,11 @@ function Analytics() {
                                 <div className="empty-state">
                                     <div className="empty-icon">🏦</div>
                                     <h3>Немає даних про банківський рахунок</h3>
-                                    <p>Додайте банк в налаштуваннях профілю для відображення аналітики</p>
+                                    <p>Додайте банк в налаштуваннях профілю або синхронізуйте транзакції</p>
                                 </div>
                             </div>
                         )}
+
                     </div>
                 )}
             </div>

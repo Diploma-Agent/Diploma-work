@@ -45,6 +45,23 @@ export const financeService = {
 		if (!response.ok) throw new Error('Помилка видалення банку');
 	},
 
+	async syncTransactions(token, source, days = 365) {
+		const response = await fetch(`${API_URL}/transactions/sync/`, {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ source, days }),
+		});
+
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({}));
+			throw new Error(error.error || 'Помилка синхронізації');
+		}
+		return response.json();
+	},
+
 	// === АНАЛІТИКА БАНКУ ===
 	async getBankAnalytics(token) {
 		const response = await fetch(`${API_URL}/analytics/bank/`, {

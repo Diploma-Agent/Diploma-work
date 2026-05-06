@@ -81,7 +81,7 @@ function Register() {
 			});
 			
 			if (loginData.token) {
-				navigate('/dashboard');
+				navigate('/');
 			}
 		} catch (err) {
 			setError(err.message || 'Сталася помилка.');

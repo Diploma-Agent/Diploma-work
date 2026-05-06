@@ -30,6 +30,7 @@ function Profile() {
 	const [banks, setBanks] = useState([]);
 	const [showAddBank, setShowAddBank] = useState(false);
 	const [bankForm, setBankForm] = useState({ name: '', type: 'monobank', apiKey: '' });
+	const [syncingBankId, setSyncingBankId] = useState(null);
 	const navigate = useNavigate();
 
 	const fetchUserData = useCallback(async () => {
@@ -177,6 +178,21 @@ function Profile() {
 		}
 	};
 
+	const handleSyncBank = async (bank) => {
+		try {
+			setSyncingBankId(bank.id);
+			setError('');
+			const token = localStorage.getItem('token');
+			const result = await financeService.syncTransactions(token, bank.bank_name, 365);
+			setSuccess(`Синхронізовано: +${result.transactions_added} нових, оновлено ${result.transactions_updated}`);
+			setTimeout(() => setSuccess(''), 5000);
+		} catch (err) {
+			setError(err.message || 'Помилка синхронізації');
+		} finally {
+			setSyncingBankId(null);
+		}
+	};
+
 	const handleCancelEdit = () => {
 		setEditMode(false);
 		setForm({ 
@@ -223,7 +239,7 @@ function Profile() {
 			
 			// Перенаправляємо на головну через 1 секунду
 			setTimeout(() => {
-				navigate('/dashboard');
+				navigate('/');
 			}, 1000);
 		} catch (err) {
 			setError(err.message || 'Помилка при збереженні даних.');
@@ -295,7 +311,7 @@ function Profile() {
 							)}
 							
 							{activeTab === 'banks' && (
-								<BanksTab 
+								<BanksTab
 									banks={banks}
 									showAddBank={showAddBank}
 									setShowAddBank={setShowAddBank}
@@ -303,6 +319,8 @@ function Profile() {
 									onBankChange={onBankChange}
 									handleAddBank={handleAddBank}
 									handleRemoveBank={handleRemoveBank}
+									handleSyncBank={handleSyncBank}
+									syncingBankId={syncingBankId}
 								/>
 							)}
 							

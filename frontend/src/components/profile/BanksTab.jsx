@@ -1,13 +1,15 @@
 import React from 'react';
 
-const BanksTab = ({ 
-    banks, 
-    showAddBank, 
-    setShowAddBank, 
-    bankForm, 
-    onBankChange, 
-    handleAddBank, 
-    handleRemoveBank 
+const BanksTab = ({
+    banks,
+    showAddBank,
+    setShowAddBank,
+    bankForm,
+    onBankChange,
+    handleAddBank,
+    handleRemoveBank,
+    handleSyncBank,
+    syncingBankId
 }) => {
     // Використовуємо файли з папки public/images
     const bankLogos = {
@@ -121,13 +123,24 @@ const BanksTab = ({
                                     {bank.status === 'active' ? '● Активний' : '○ Неактивний'}
                                 </span>
                             </div>
-                            <button
-                                onClick={() => handleRemoveBank(bank.id)}
-                                className="remove-button"
-                                title="Видалити"
-                            >
-                                🗑️
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <button
+                                    onClick={() => handleSyncBank(bank)}
+                                    className="remove-button"
+                                    title="Синхронізувати транзакції"
+                                    disabled={syncingBankId === bank.id}
+                                    style={{ background: syncingBankId === bank.id ? '#a0aec0' : '#48bb78', color: '#fff', border: 'none' }}
+                                >
+                                    {syncingBankId === bank.id ? '⏳' : '🔄'}
+                                </button>
+                                <button
+                                    onClick={() => handleRemoveBank(bank.id)}
+                                    className="remove-button"
+                                    title="Видалити"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
                         </div>
                     ))
                 )}

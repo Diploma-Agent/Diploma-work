@@ -44,12 +44,12 @@ function Navbar() {
 	return (
 		<nav className="navbar">
 			<div className="navbar-container">
-				<Link to="/dashboard" className="navbar-logo">
+				<Link to="/" className="navbar-logo">
 					💰 BanFin
 				</Link>
 
 				<div className="navbar-menu">
-					<Link to="/dashboard" className="navbar-link">
+					<Link to="/" className="navbar-link">
 						📊 Головна
 					</Link>
 					<Link to="/profile" className="navbar-link">

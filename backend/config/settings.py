@@ -159,8 +159,6 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    # Додаємо наш обробник помилок
-    'EXCEPTION_HANDLER': 'config.utils.custom_exception_handler',
     'EXCEPTION_HANDLER': 'finance.exceptions.custom_exception_handler',
 }
 

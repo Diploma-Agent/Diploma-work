@@ -1,5 +1,5 @@
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from django.core.cache import cache
 from django.utils import timezone
 import time
@@ -30,8 +30,10 @@ class MonobankService:
             
             try:
                 tx_date = datetime.fromisoformat(t.get('transaction_date'))
+                # Після виправлення _format_transactions дата вже UTC-aware (+00:00).
+                # Якщо з якоїсь причини naive — вважаємо UTC.
                 if timezone.is_naive(tx_date):
-                    tx_date = timezone.make_aware(tx_date)
+                    tx_date = timezone.make_aware(tx_date, dt_timezone.utc)
             except Exception:
                 continue
             
@@ -42,11 +44,12 @@ class MonobankService:
             ).first()
             
             if existing:
-                existing.description = t.get('description', '')
-                existing.type = t.get('type')
-                existing.category_id = t.get('category_id')
-                existing.amount = amount_float
-                existing.raw_data = t
+                existing.description  = t.get('description', '')
+                existing.counterparty = t.get('counterparty', '')
+                existing.type         = t.get('type')
+                existing.category_id  = t.get('category_id')
+                existing.amount       = amount_float
+                existing.raw_data     = t
                 existing.save()
                 updated += 1
             else:
@@ -58,6 +61,7 @@ class MonobankService:
                     amount=amount_float,
                     currency=t.get('currency', 'UAH'),
                     description=t.get('description', ''),
+                    counterparty=t.get('counterparty', ''),
                     transaction_date=tx_date,
                     raw_data=t
                 )
@@ -234,7 +238,8 @@ class MonobankService:
                 'description': description,
                 'counterparty': counterparty,
                 'mcc': t.get('mcc'),
-                'transaction_date': datetime.fromtimestamp(t.get('time')).isoformat(),
+                # Конвертуємо Unix-timestamp у UTC (без локального зміщення сервера)
+                'transaction_date': datetime.fromtimestamp(t.get('time'), tz=dt_timezone.utc).isoformat(),
                 'raw_data': t
             })
         return formatted

@@ -31,7 +31,7 @@ function Login() {
 			
 			if (data.token) {
 				// Токен вже збережено в authService.login
-				navigate('/dashboard');
+				navigate('/');
 			} else {
 				throw new Error('Токен не отримано');
 			}

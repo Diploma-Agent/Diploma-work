@@ -770,17 +770,48 @@ class AIForecastView(views.APIView):
         from django.core.cache import cache
         import hashlib
         import json
-        
+
         days = int(request.query_params.get('days', 30))
 
         try:
-            bank = BankConnection.objects.filter(
-                user=request.user, bank_name='monobank', status='active'
-            ).first()
-
+            # Беремо транзакції з БД за останні 180 днів (6 міс) для якісного тренду.
+            # НЕ звертаємось до Monobank API — щоб не впиратись у rate limit
+            # і отримувати повну збережену історію.
             transactions = []
-            if bank:
-                transactions = _get_uah_transactions(bank.access_token, days=30)
+            try:
+                dt_to = datetime.now(pytz.utc)
+                dt_from = dt_to - timedelta(days=180)
+
+                client = MongoClient(settings.MONGODB_URI)
+                db_mongo = client[settings.MONGODB_DATABASE]
+                collection = db_mongo['transactions']
+
+                query = {
+                    'user_id': request.user.id,
+                    'currency': 'UAH',
+                    'type': {'$in': ['income', 'expense']},
+                    'transaction_date': {'$gte': dt_from, '$lte': dt_to}
+                }
+                cursor = collection.find(query).sort('transaction_date', 1)
+
+                for doc in cursor:
+                    tx_date = doc.get('transaction_date', dt_to)
+                    tx_date_iso = tx_date.isoformat() if hasattr(tx_date, 'isoformat') else str(tx_date)
+                    transactions.append({
+                        'transaction_date': tx_date_iso,
+                        'type': doc.get('type', ''),
+                        'amount': float(str(doc.get('amount', 0))),
+                        'id': str(doc.get('_id', '')),
+                    })
+                client.close()
+                print(f"[AIForecastView] Отримано {len(transactions)} транзакцій із БД за 180 днів")
+            except Exception as db_err:
+                print(f"[AIForecastView] DB error, fallback to Monobank API: {db_err}")
+                bank = BankConnection.objects.filter(
+                    user=request.user, bank_name='monobank', status='active'
+                ).first()
+                if bank:
+                    transactions = _get_uah_transactions(bank.access_token, days=90)
             
             # Створюємо хеш на основі транзакцій та днів, щоб перевірити, чи змінились дані
             tx_light = [{'id': t.get('id'), 'amount': t.get('amount')} for t in transactions]
@@ -896,29 +927,30 @@ class AIChatView(views.APIView):
                 from django.utils import timezone
                 now = timezone.now()
                 thirty_days_ago = now - timedelta(days=30)
-                
-                # БЕРЕМО ДАНІ ВИКЛЮЧНО З ЛОКАЛЬНОЇ БАЗИ MongoDB
-                local_txs = Transaction.objects.filter(
-                    user=request.user, 
-                    transaction_date__gte=thirty_days_ago
-                ).order_by('-transaction_date')
 
-                current_month_income = 0
-                current_month_expenses = 0
+                # БЕРЕМО ДАНІ ВИКЛЮЧНО З ЛОКАЛЬНОЇ БАЗИ MongoDB
+                # Фільтруємо тільки UAH-транзакції (банк), щоб не змішувати з крипто
+                local_txs = Transaction.objects.filter(
+                    user=request.user,
+                    transaction_date__gte=thirty_days_ago,
+                    currency='UAH'
+                ).exclude(type='transfer').order_by('-transaction_date')
+
+                # Баг 1 fix: підсумок і список тепер охоплюють однаковий період (30 днів)
+                # Баг 2 fix: transfer-транзакції виключені через .exclude() — не потраплять ні в підсумок, ні в список
+                income_30d = 0
+                expenses_30d = 0
 
                 for t in local_txs:
-                    if t.type == 'transfer':
-                        continue
-                    if t.transaction_date.year == now.year and t.transaction_date.month == now.month:
-                        if t.type == 'income':
-                            current_month_income += float(str(t.amount))
-                        elif t.type == 'expense':
-                            current_month_expenses += float(str(t.amount))
+                    if t.type == 'income':
+                        income_30d += float(str(t.amount))
+                    elif t.type == 'expense':
+                        expenses_30d += float(str(t.amount))
 
                 context = {
                     'balance': round(balance, 2),
-                    'income': round(current_month_income, 2),
-                    'expenses': round(current_month_expenses, 2),
+                    'income': round(income_30d, 2),
+                    'expenses': round(expenses_30d, 2),
                     'month': now.strftime("%B %Y"),
                     'recent_transactions': [
                         {
@@ -941,36 +973,47 @@ class AIChatView(views.APIView):
             
             def fetch_tx_callback(days=30, date_from=None, date_to=None):
                 print(f"[fetch_tx_callback] days={days}, date_from={date_from}, date_to={date_to}")
-                def parse_date(date_str, is_end=False):
+
+                # Часовий пояс Kyiv — саме в ньому Monobank показує транзакції
+                kyiv_tz = pytz.timezone('Europe/Kiev')
+
+                def parse_date_kyiv(date_str, is_end=False):
+                    """Парсить рядок дати як Kyiv-aware datetime і конвертує в UTC."""
                     try:
-                        return datetime.strptime(date_str, "%Y-%m-%d")
+                        dt_naive = datetime.strptime(date_str, "%Y-%m-%d")
                     except ValueError:
                         try:
-                            dt = datetime.strptime(date_str, "%Y-%m")
+                            dt_naive = datetime.strptime(date_str, "%Y-%m")
                             if is_end:
-                                if dt.month == 12:
-                                    return dt.replace(year=dt.year+1, month=1, day=1) - timedelta(days=1)
-                                return dt.replace(month=dt.month+1, day=1) - timedelta(days=1)
-                            return dt
+                                # Останній день місяця
+                                if dt_naive.month == 12:
+                                    dt_naive = dt_naive.replace(year=dt_naive.year + 1, month=1, day=1) - timedelta(days=1)
+                                else:
+                                    dt_naive = dt_naive.replace(month=dt_naive.month + 1, day=1) - timedelta(days=1)
                         except ValueError:
-                            return datetime.now()
+                            dt_naive = datetime.now()
+
+                    if is_end:
+                        dt_naive = dt_naive.replace(hour=23, minute=59, second=59)
+
+                    # Локалізуємо як Kyiv і конвертуємо в UTC
+                    return kyiv_tz.localize(dt_naive).astimezone(pytz.utc)
 
                 try:
-                    # Визначаємо діапазон дат
+                    # Визначаємо діапазон дат у UTC (з урахуванням Kyiv-timezone)
                     if date_from and date_from not in ("None", "null") and \
                     date_to and date_to not in ("None", "null"):
                         if isinstance(date_from, str):
-                            dt_from = parse_date(date_from)
+                            dt_from = parse_date_kyiv(date_from, is_end=False)
                         else:
-                            dt_from = datetime.combine(date_from, datetime.min.time())
-                        
+                            dt_from = kyiv_tz.localize(datetime.combine(date_from, datetime.min.time())).astimezone(pytz.utc)
+
                         if isinstance(date_to, str):
-                            dt_to = parse_date(date_to, is_end=True)
-                            dt_to = dt_to.replace(hour=23, minute=59, second=59)
+                            dt_to = parse_date_kyiv(date_to, is_end=True)
                         else:
-                            dt_to = datetime.combine(date_to, datetime.max.time())
+                            dt_to = kyiv_tz.localize(datetime.combine(date_to, datetime.max.time())).astimezone(pytz.utc)
                     else:
-                        dt_to = datetime.now()
+                        dt_to = datetime.now(pytz.utc)
                         dt_from = dt_to - timedelta(days=days)
 
                     # Підключаємось до MongoDB напряму
@@ -978,50 +1021,45 @@ class AIChatView(views.APIView):
                     db = client[settings.MONGODB_DATABASE]
                     collection = db['transactions']
 
-                    # transaction_date в MongoDB може зберігатись як рядок або datetime
-                    # Шукаємо обидва варіанти
-                    dt_from_str = dt_from.strftime("%Y-%m-%d")
-                    dt_to_str = dt_to.strftime("%Y-%m-%d")
-
+                    # Фільтруємо тільки UAH-транзакції, без переказів.
+                    # dt_from / dt_to — UTC-aware datetimes, що відповідають Kyiv-добам
                     query = {
                         'user_id': request.user.id,
-                        '$or': [
-                            # Якщо зберігається як datetime
-                            {
-                                'transaction_date': {
-                                    '$gte': dt_from,
-                                    '$lte': dt_to
-                                }
-                            },
-                            # Якщо зберігається як рядок ISO формату
-                            {
-                                'transaction_date': {
-                                    '$gte': dt_from_str,
-                                    '$lte': dt_to_str + 'T23:59:59'
-                                }
-                            }
-                        ]
+                        'currency': 'UAH',
+                        'type': {'$in': ['income', 'expense']},
+                        'transaction_date': {
+                            '$gte': dt_from,
+                            '$lte': dt_to
+                        }
                     }
 
                     cursor = collection.find(query).sort('transaction_date', -1)
 
                     result = []
+                    income_total = 0.0
+                    expense_total = 0.0
                     for doc in cursor:
-                        tx_date = doc.get('transaction_date', datetime.now())
-                        if isinstance(tx_date, str):
-                            tx_date_iso = tx_date
-                        else:
-                            tx_date_iso = tx_date.isoformat()
+                        tx_date = doc.get('transaction_date', datetime.now(pytz.utc))
+                        tx_date_iso = tx_date.isoformat() if hasattr(tx_date, 'isoformat') else str(tx_date)
+                        amount = float(str(doc.get('amount', 0)))
+                        tx_type = doc.get('type', '')
+
+                        if tx_type == 'income':
+                            income_total += amount
+                        elif tx_type == 'expense':
+                            expense_total += amount
 
                         result.append({
                             'transaction_date': tx_date_iso,
-                            'type': doc.get('type', ''),
-                            'amount': float(str(doc.get('amount', 0))),
+                            'type': tx_type,
+                            'amount': amount,
                             'description': doc.get('description', ''),
                         })
 
                     client.close()
-                    print(f"[PyMongo] Знайдено {len(result)} транзакцій за період {dt_from_str} - {dt_to_str}")
+                    print(f"[PyMongo] Знайдено {len(result)} транзакцій | "
+                          f"Діапазон UTC: {dt_from.isoformat()} — {dt_to.isoformat()} | "
+                          f"Надходження: {income_total:.2f} UAH | Витрати: {expense_total:.2f} UAH")
                     return result
 
                 except Exception as e:

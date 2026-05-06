@@ -6,9 +6,10 @@ import Profile from './templates/Profile';
 import Dashboard from './templates/Dashboard';
 import Analytics from './templates/Analytics';
 import Transactions from './templates/Transactions';
+import CreateProfile from './templates/CreateProfile';
 import ChatComponent from './components/ChatComponent';
 
-const AUTH_ROUTES = ['/login', '/register', '/'];
+const AUTH_ROUTES = ['/login', '/register', '/create-profile'];
 
 const PrivateRoute = ({ children }) => {
 	const isAuthenticated = localStorage.getItem('token');
@@ -25,13 +26,12 @@ function AppContent() {
 			<Routes>
 				<Route path="/register" element={<Register />} />
 				<Route path="/login" element={<Login />} />
-				
+
+				<Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
 				<Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-				<Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+				<Route path="/create-profile" element={<PrivateRoute><CreateProfile /></PrivateRoute>} />
 				<Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
 				<Route path="/analytics" element={<PrivateRoute><Analytics /></PrivateRoute>} />
-				
-				<Route path="/" element={<Navigate to="/login" replace />} />
 			</Routes>
 			{showChat && <ChatComponent />}
 		</>
