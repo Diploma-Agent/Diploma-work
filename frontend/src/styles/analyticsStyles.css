@@ -1196,3 +1196,34 @@
     }
 }
 
+
+/* ── R² кольорові мітки ── */
+.accuracy-metric.r2-high {
+    color: #68d391;
+}
+
+.accuracy-metric.r2-mid {
+    color: #f6ad55;
+}
+
+.accuracy-metric.r2-low {
+    color: #fc8181;
+}
+
+.r2-label-text {
+    font-size: 0.75rem;
+    opacity: 0.85;
+}
+
+/* ── Агрегація доходів (тижнева/місячна) ── */
+.agg-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    background: rgba(102, 126, 234, 0.2);
+    color: #a0aec0;
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 5px;
+    vertical-align: middle;
+    font-weight: 400;
+}

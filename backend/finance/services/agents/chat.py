@@ -72,10 +72,25 @@ class ChatAgent:
             tx_json = json.dumps(
                 tx_data, ensure_ascii=False) if tx_data else "[]"
 
+            # Секція аномалій (якщо є — Gemini може згадати про них у відповіді)
+            anomaly_count = context.get('anomaly_count', 0)
+            anomaly_section = ""
+            if anomaly_count > 0:
+                anom_txs = context.get('anomalous_transactions', [])
+                anom_list = "; ".join(
+                    f"{a.get('description', '')[:25]} {a.get('amount', 0):.0f} UAH ({a.get('date', '')})"
+                    for a in anom_txs[:3]
+                )
+                anomaly_section = (
+                    f"[АНОМАЛЬНІ ВИТРАТИ: знайдено {anomaly_count} підозрілих транзакцій за 30 днів: {anom_list}. "
+                    f"Якщо питання стосується незвичних витрат або безпеки — згадай про них.]\n"
+                )
+
             context_text = (
                 f"[Фінансові дані користувача (ЗА ОСТАННІ 30 ДНІВ, тільки UAH, без переказів): "
                 f"Баланс {context.get('balance', 0)} UAH, "
                 f"Доходи {context.get('income', 0)} UAH, Витрати {context.get('expenses', 0)} UAH]\n"
+                f"{anomaly_section}"
                 f"[Список транзакцій нижче (ТІЛЬКИ за останні 30 днів, тільки UAH, без переказів): {tx_json}]\n"
                 f"УВАГА: Числа Доходи/Витрати вище точно відповідають цьому списку — НЕ перераховуй їх самостійно, використовуй готові підсумки. "
                 f"Якщо користувач питає про період РАНІШЕ ніж 30 днів (наприклад, 'за січень 2026', 'у грудні'), "

@@ -735,26 +735,44 @@ class AIInvestmentView(views.APIView):
 
     def get(self, request):
         try:
+            # Баланс — з Monobank API (реальний поточний баланс рахунку)
+            balance = 0.0
             bank = BankConnection.objects.filter(
                 user=request.user, bank_name='monobank', status='active'
             ).first()
-
-            transactions = []
-            balance = 0.0
             if bank:
-                transactions = _get_uah_transactions(
-                    bank.access_token, days=30)
-                balance = _get_real_balance(bank.access_token)[0]
+                try:
+                    balance = _get_real_balance(bank.access_token)[0]
+                except Exception:
+                    pass
 
-            income = sum(t['amount']
-                         for t in transactions if t['type'] == 'income')
-            expenses = sum(t['amount']
-                           for t in transactions if t['type'] == 'expense')
+            # Доходи/витрати — з БД (повна локальна картина, без rate-limit)
+            income = 0.0
+            expenses = 0.0
+            try:
+                dt_to = datetime.now(pytz.utc)
+                dt_from = dt_to - timedelta(days=30)
+                client = MongoClient(settings.MONGODB_URI)
+                db_mongo = client[settings.MONGODB_DATABASE]
+                for doc in db_mongo['transactions'].find({
+                    'user_id': request.user.id,
+                    'currency': 'UAH',
+                    'type': {'$in': ['income', 'expense']},
+                    'transaction_date': {'$gte': dt_from, '$lte': dt_to}
+                }):
+                    amt = float(str(doc.get('amount', 0)))
+                    if doc.get('type') == 'income':
+                        income += amt
+                    else:
+                        expenses += amt
+                client.close()
+            except Exception as db_err:
+                print(f"[AIInvestmentView] DB error: {db_err}")
 
             bank_data = {
-                'balance': balance,
-                'income': income,
-                'expenses': expenses
+                'balance': round(balance, 2),
+                'income': round(income, 2),
+                'expenses': round(expenses, 2),
             }
             result = InvestmentAdvisorAgent.advise(bank_data)
             return Response(result)
@@ -888,13 +906,34 @@ class AIAnomalyView(views.APIView):
 
     def get(self, request):
         try:
-            bank = BankConnection.objects.filter(
-                user=request.user, bank_name='monobank', status='active'
-            ).first()
-
+            # 90 днів з БД — більший вибір дає точнішу медіану і MAD-поріг
             transactions = []
-            if bank:
-                transactions = _get_uah_transactions(bank.access_token, days=30)
+            try:
+                dt_to = datetime.now(pytz.utc)
+                dt_from = dt_to - timedelta(days=90)
+                client = MongoClient(settings.MONGODB_URI)
+                db_mongo = client[settings.MONGODB_DATABASE]
+                for doc in db_mongo['transactions'].find({
+                    'user_id': request.user.id,
+                    'currency': 'UAH',
+                    'type': {'$in': ['income', 'expense']},
+                    'transaction_date': {'$gte': dt_from, '$lte': dt_to}
+                }).sort('transaction_date', -1):
+                    tx_date = doc.get('transaction_date', dt_to)
+                    transactions.append({
+                        'type': doc.get('type', ''),
+                        'amount': float(str(doc.get('amount', 0))),
+                        'description': doc.get('description', ''),
+                        'counterparty': doc.get('counterparty', ''),
+                        'transaction_date': (
+                            tx_date.isoformat()
+                            if hasattr(tx_date, 'isoformat') else str(tx_date)
+                        ),
+                    })
+                client.close()
+                print(f"[AIAnomalyView] {len(transactions)} транзакцій за 90 днів з БД")
+            except Exception as db_err:
+                print(f"[AIAnomalyView] DB error: {db_err}")
 
             result = AnomalyDetectorAgent.detect(transactions)
             return Response(result)
@@ -947,11 +986,33 @@ class AIChatView(views.APIView):
                     elif t.type == 'expense':
                         expenses_30d += float(str(t.amount))
 
+                # Швидка детекція аномалій для контексту чату
+                # (використовуємо вже отримані local_txs, без зайвого API-виклику)
+                tx_for_anomaly = [
+                    {
+                        'type': t.type,
+                        'amount': round(float(str(t.amount)), 2),
+                        'description': t.description,
+                        'counterparty': getattr(t, 'counterparty', ''),
+                        'transaction_date': t.transaction_date.isoformat(),
+                    }
+                    for t in local_txs
+                ]
+                try:
+                    anomaly_result = AnomalyDetectorAgent.detect(tx_for_anomaly)
+                    anomaly_count = anomaly_result.get('anomaly_count', 0)
+                    anomalous_txs = anomaly_result.get('anomalous_transactions', [])
+                except Exception:
+                    anomaly_count = 0
+                    anomalous_txs = []
+
                 context = {
                     'balance': round(balance, 2),
                     'income': round(income_30d, 2),
                     'expenses': round(expenses_30d, 2),
                     'month': now.strftime("%B %Y"),
+                    'anomaly_count': anomaly_count,
+                    'anomalous_transactions': anomalous_txs,
                     'recent_transactions': [
                         {
                             'date': t.transaction_date.isoformat()[:10],
