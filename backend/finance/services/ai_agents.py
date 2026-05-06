@@ -1,11 +1,3 @@
-from google import genai
-import os
-
-
-# Ре-експорт з base.py для сумісності
-from .agents.base import MODEL
-
-
 from .agents import (
     FinancialAnalystAgent,
     InvestmentAdvisorAgent,
