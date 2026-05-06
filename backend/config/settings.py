@@ -153,6 +153,12 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# WhiteNoise роздає зібраний React SPA з кореневого URL
+# frontend_dist/index.html → /
+# frontend_dist/assets/*   → /assets/*
+WHITENOISE_ROOT = BASE_DIR / 'frontend_dist'
+WHITENOISE_INDEX_FILE = True
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 

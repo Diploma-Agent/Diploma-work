@@ -1,6 +1,3 @@
-# Фронтенд — не потрібен у Docker-образі бекенду
-frontend/
-
 # Середовище
 backend/.env
 backend/.env.*
