@@ -88,10 +88,22 @@ class BybitService:
         except requests.exceptions.RequestException as e:
             raise Exception(f"Bybit API request failed: {str(e)}")
     
-    def get_wallet_balance(self, account_type='UNIFIED'):
-        """Get wallet balance"""
-        params = {'accountType': account_type}
-        return self._make_request('GET', '/v5/account/wallet-balance', params)
+    def get_wallet_balance(self, account_type=None):
+        """Get wallet balance — автоматично визначає тип акаунту"""
+        if account_type:
+            params = {'accountType': account_type}
+            return self._make_request('GET', '/v5/account/wallet-balance', params)
+
+        # Перебираємо типи: Unified → Spot → Contract
+        for acc_type in ('UNIFIED', 'SPOT', 'CONTRACT'):
+            try:
+                params = {'accountType': acc_type}
+                result = self._make_request('GET', '/v5/account/wallet-balance', params)
+                return result
+            except Exception:
+                continue
+
+        raise Exception("Не вдалося отримати баланс: жоден тип акаунту не підійшов")
     
     def get_transaction_log(self, category='spot', limit=50):
         """Get transaction log"""
@@ -110,7 +122,7 @@ class BybitService:
         return self._make_request('GET', '/v5/execution/list', params)
     
     def get_open_orders(self, category='spot', symbol=None, settleCoin=None, limit=50):
-        """Get open orders"""
+        """Get open orders — повертає порожній список якщо категорія недоступна"""
         params = {
             'category': category,
             'limit': limit
@@ -119,8 +131,13 @@ class BybitService:
             params['symbol'] = symbol
         if settleCoin:
             params['settleCoin'] = settleCoin
-            
-        return self._make_request('GET', '/v5/order/realtime', params)
+
+        try:
+            return self._make_request('GET', '/v5/order/realtime', params)
+        except Exception as e:
+            # Futures/linear можуть бути недоступні для звичайного акаунту
+            print(f"[BybitService] get_open_orders({category}) failed: {e}")
+            return {'list': []}
     
     def sync_transactions(self, crypto_exchange, days=30):
         """Synchronize trades from Bybit to database"""
