@@ -95,15 +95,8 @@ class BinanceService:
     def get_futures_balances(self):
         """Get USDT-M Futures account balances"""
         try:
-            futures_url = "https://fapi.binance.com/fapi/v2/account"
-            params = {'timestamp': int(time.time() * 1000)}
-            query_string = '&'.join([f"{k}={v}" for k, v in params.items()])
-            params['signature'] = self._generate_signature(query_string)
-            
-            response = requests.get(futures_url, headers=self.headers, params=params)
-            if response.status_code == 200:
-                return response.json().get('assets', [])
-            return []
+            result = self._make_request('GET', 'https://fapi.binance.com/fapi/v2/account', {})
+            return result.get('assets', [])
         except Exception as e:
             print(f"Failed to fetch futures assets: {str(e)}")
             return []
@@ -131,15 +124,15 @@ class BinanceService:
                 add_to_map(b.get('asset'), b.get('free'), b.get('locked'))
         except Exception: pass
 
-        # 2. Funding (SAPI)
+        # 2. Funding (SAPI) — опціонально, потребує додаткових прав
         try:
             funding_assets = self.get_user_assets()
             for asset in funding_assets:
-                # consolidate freeze into locked
                 f = float(asset.get('free', 0))
                 l = float(asset.get('locked', 0)) + float(asset.get('freeze', 0)) + float(asset.get('withdrawing', 0))
                 add_to_map(asset.get('asset'), f, l)
-        except Exception: pass
+        except Exception:
+            pass  # Не критично — основний баланс є в Spot
 
         # 3. Futures (FAPI)
         try:
