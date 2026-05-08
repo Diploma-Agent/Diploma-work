@@ -71,6 +71,20 @@ def debug_binance(request):
         except Exception as e:
             results['funding_error'] = str(e)
 
+        # Тест 3: Simple Earn Flexible (Savings)
+        try:
+            earn = svc._make_request('GET', '/sapi/v1/simple-earn/flexible/position', {'size': 10})
+            results['simple_earn'] = earn
+        except Exception as e:
+            results['simple_earn_error'] = str(e)
+
+        # Тест 4: Lending (старий формат Savings)
+        try:
+            lending = svc._make_request('GET', '/sapi/v1/lending/daily/token/position', {'asset': 'USDT'})
+            results['lending_usdt'] = lending
+        except Exception as e:
+            results['lending_error'] = str(e)
+
     except Exception as e:
         results['global_error'] = str(e)
 
