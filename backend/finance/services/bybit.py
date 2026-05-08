@@ -231,16 +231,21 @@ class BybitService:
     
     @staticmethod
     def validate_credentials(api_key, api_secret):
-        """Validate Bybit API credentials"""
+        """Validate Bybit API credentials.
+
+        Використовуємо /v5/user/query-api — мінімальні права, лише підтвердження ключа.
+        403 = ключ валідний, але немає прав на endpoint → все одно True.
+        401 / підпис невірний → False.
+        """
         service = BybitService(api_key, api_secret)
         try:
-            # Спроба 1: Перевірка для Unified Account
-            service.get_wallet_balance(account_type='UNIFIED')
+            # query-api потребує лише валідного підпису — не залежить від прав акаунту
+            service._make_request('GET', '/v5/user/query-api', {})
             return True
-        except Exception:
-            try:
-                # Спроба 2: Перевірка для Standard Account (SPOT)
-                service.get_wallet_balance(account_type='SPOT')
+        except Exception as e:
+            err = str(e).lower()
+            # 403 = ключ існує, але немає дозволу на конкретний endpoint → ключ валідний
+            if '403' in err or 'forbidden' in err:
                 return True
-            except Exception:
-                return False
+            # 10003/10004 = невірний підпис або ключ → дійсно невалідний
+            return False
