@@ -95,6 +95,13 @@ class BybitService:
 
             return data.get('result', {})
 
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code if e.response is not None else 0
+            if status_code == 451:
+                raise Exception("Bybit недоступний з поточного регіону сервера (geo-restriction 451). Змініть регіон Render на EU.")
+            if status_code == 403:
+                raise Exception(f"Bybit API 403 Forbidden — API ключ не має прав на цей endpoint")
+            raise Exception(f"Bybit API request failed: {str(e)}")
         except requests.exceptions.RequestException as e:
             raise Exception(f"Bybit API request failed: {str(e)}")
     

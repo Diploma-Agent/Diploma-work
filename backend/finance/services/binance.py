@@ -6,6 +6,7 @@ import requests
 import hmac
 import hashlib
 import time
+from urllib.parse import urlencode
 from datetime import datetime, timedelta
 from finance.models import Transaction, TransactionCategory, SyncLog
 
@@ -31,25 +32,44 @@ class BinanceService:
         ).hexdigest()
     
     def _make_request(self, method, endpoint, params=None, signed=True):
-        """Make authenticated request to Binance API"""
-        url = f"{self.BASE_URL}{endpoint}"
-        
+        """Make authenticated request to Binance API.
+
+        Підпис будується на точному query string що буде відправлений —
+        це гарантує відповідність підпису і уникає 401 через порядок params.
+        """
+        # Якщо endpoint — повний URL (futures тощо), використовуємо його напряму
+        if endpoint.startswith('http'):
+            url = endpoint
+        else:
+            url = f"{self.BASE_URL}{endpoint}"
+
         if params is None:
             params = {}
-        
+
         if signed:
             params['timestamp'] = int(time.time() * 1000)
-            query_string = '&'.join([f"{k}={v}" for k, v in params.items()])
-            params['signature'] = self._generate_signature(query_string)
-        
+            params['recvWindow'] = 5000
+            # Будуємо query string в тому ж порядку що й підписуємо
+            query_string = urlencode(params)
+            signature = self._generate_signature(query_string)
+            # Підпис додаємо в кінець — саме так Binance очікує
+            full_url = f"{url}?{query_string}&signature={signature}"
+        else:
+            full_url = url
+
         try:
             if method == 'GET':
-                response = requests.get(url, headers=self.headers, params=params)
+                response = requests.get(full_url, headers=self.headers, timeout=15)
             elif method == 'POST':
-                response = requests.post(url, headers=self.headers, params=params)
-            
+                response = requests.post(full_url, headers=self.headers, timeout=15)
+
             response.raise_for_status()
             return response.json()
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code if e.response is not None else 0
+            if status_code == 451:
+                raise Exception("Binance недоступний з цього регіону сервера (451 geo-restriction)")
+            raise Exception(f"Binance API request failed: {str(e)}")
         except requests.exceptions.RequestException as e:
             raise Exception(f"Binance API request failed: {str(e)}")
 
