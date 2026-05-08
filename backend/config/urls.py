@@ -29,6 +29,16 @@ def health_check(request):
     return JsonResponse({'status': 'ok'})
 
 
+def server_ip(request):
+    """Показує реальний вихідний IP сервера (для whitelist у Binance/Bybit)."""
+    import requests as req
+    try:
+        ip = req.get('https://api.ipify.org?format=json', timeout=5).json().get('ip')
+    except Exception:
+        ip = 'unavailable'
+    return JsonResponse({'server_outbound_ip': ip})
+
+
 def spa_view(request, path=''):
     """Повертає React index.html для всіх не-API маршрутів (React Router)."""
     index_path = os.path.join(settings.BASE_DIR, 'frontend_dist', 'index.html')
@@ -66,6 +76,7 @@ urlpatterns = [
 
     # Health check (Render.com, no auth required)
     path('api/health/', health_check, name='health_check'),
+    path('api/server-ip/', server_ip, name='server_ip'),
 
     # API endpoints
     path('api/auth/', include('authentication.urls')),

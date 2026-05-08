@@ -69,6 +69,10 @@ class BinanceService:
             status_code = e.response.status_code if e.response is not None else 0
             if status_code == 451:
                 raise Exception("Binance недоступний з цього регіону сервера (451 geo-restriction)")
+            if status_code == 418:
+                raise Exception("Binance заблокував запит (418) — futures акаунт відсутній або IP заблоковано")
+            if status_code == 401:
+                raise Exception("Binance 401 Unauthorized — перевірте що в API ключі увімкнено 'Enable Reading'")
             raise Exception(f"Binance API request failed: {str(e)}")
         except requests.exceptions.RequestException as e:
             raise Exception(f"Binance API request failed: {str(e)}")
