@@ -20,71 +20,81 @@ class BybitService:
         self.api_key = api_key
         self.api_secret = api_secret
     
-    def _generate_signature(self, timestamp, params_str):
-        """Generate HMAC SHA256 signature for Bybit"""
-        param_str = f"{timestamp}{self.api_key}{params_str}"
+    def _generate_signature(self, pre_sign: str) -> str:
+        """HMAC-SHA256 підпис за Bybit v5 docs.
+        pre_sign = timestamp + api_key + recv_window + payload
+        """
         return hmac.new(
             self.api_secret.encode('utf-8'),
-            param_str.encode('utf-8'),
+            pre_sign.encode('utf-8'),
             hashlib.sha256
         ).hexdigest()
     
     def _make_request(self, method, endpoint, params=None):
-        """Make authenticated request to Bybit API"""
+        """Make authenticated request to Bybit API v5.
+
+        Підпис за офіційною документацією:
+        https://bybit-exchange.github.io/docs/v5/guide
+
+        pre_sign = timestamp + api_key + recv_window + queryString
+        X-BAPI-RECV-WINDOW передається як header, НЕ query param.
+        """
         url = f"{self.BASE_URL}{endpoint}"
-        
+        recv_window = '20000'
+
         if params is None:
             params = {}
-            
-        # Додаємо recvWindow для компенсації розсинхронізації часу
-        params['recvWindow'] = 20000
-        
-        # Використовуємо поточний час мінус 2 секунди, щоб уникнути помилки "timestamp in the future"
-        # якщо годинник клієнта поспішає
-        timestamp = str(int((time.time() - 2) * 1000))
-        
+
+        # Bybit вимагає timestamp у мілісекундах
+        timestamp = str(int(time.time() * 1000))
+
         if method == 'GET':
-            # Sort parameters for GET request
+            # Query string — тільки бізнес-параметри (без recvWindow)
             sorted_params = sorted(params.items())
-            params_str = '&'.join([f"{k}={v}" for k, v in sorted_params])
-            
-            # Generate signature
-            signature = self._generate_signature(timestamp, params_str)
-            
-            headers = {
-                'X-BAPI-API-KEY': self.api_key,
-                'X-BAPI-TIMESTAMP': timestamp,
-                'X-BAPI-SIGN': signature
-            }
-            
-            # Pass sorted_params to requests to ensure sending order matches signing order
-            response = requests.get(url, headers=headers, params=sorted_params)
-            
-        elif method == 'POST':
-            # For POST, params_str is the JSON string
-            # Use separators to remove spaces
-            params_json = json.dumps(params)
-            
-            signature = self._generate_signature(timestamp, params_json)
-            
+            query_string = '&'.join(f"{k}={v}" for k, v in sorted_params)
+
+            # Підпис: timestamp + api_key + recv_window + queryString
+            pre_sign = f"{timestamp}{self.api_key}{recv_window}{query_string}"
+            signature = self._generate_signature(pre_sign)
+
             headers = {
                 'X-BAPI-API-KEY': self.api_key,
                 'X-BAPI-TIMESTAMP': timestamp,
                 'X-BAPI-SIGN': signature,
-                'Content-Type': 'application/json'
+                'X-BAPI-RECV-WINDOW': recv_window,
             }
-            
-            response = requests.post(url, headers=headers, data=params_json)
-        
+
+            response = requests.get(url, headers=headers, params=sorted_params, timeout=15)
+
+        elif method == 'POST':
+            params_json = json.dumps(params, separators=(',', ':'))
+
+            # Підпис: timestamp + api_key + recv_window + body
+            pre_sign = f"{timestamp}{self.api_key}{recv_window}{params_json}"
+            signature = self._generate_signature(pre_sign)
+
+            headers = {
+                'X-BAPI-API-KEY': self.api_key,
+                'X-BAPI-TIMESTAMP': timestamp,
+                'X-BAPI-SIGN': signature,
+                'X-BAPI-RECV-WINDOW': recv_window,
+                'Content-Type': 'application/json',
+            }
+
+            response = requests.post(url, headers=headers, data=params_json, timeout=15)
+
+        else:
+            raise ValueError(f"Unsupported method: {method}")
+
         try:
             response.raise_for_status()
             data = response.json()
-            
+
             if data.get('retCode') != 0:
                 raise Exception(f"Bybit API error: {data.get('retMsg')}")
-            
+
             return data.get('result', {})
-            
+
         except requests.exceptions.RequestException as e:
             raise Exception(f"Bybit API request failed: {str(e)}")
     
