@@ -517,22 +517,47 @@ class ExchangeBalanceView(views.APIView):
             elif exchange_name == 'binance':
                 service = BinanceService(exchange.api_key, exchange.api_secret)
                 raw_balance = service.get_balances()
-                
-                # Аналогічно формуємо дані для Binance
+
+                # Отримуємо поточні ціни всіх пар до USDT (публічний endpoint, без підпису)
+                prices = {}
+                try:
+                    import requests as req
+                    price_resp = req.get(
+                        'https://api.binance.com/api/v3/ticker/price',
+                        timeout=5
+                    ).json()
+                    for p in price_resp:
+                        symbol = p.get('symbol', '')
+                        if symbol.endswith('USDT'):
+                            asset = symbol[:-4]  # 'BTCUSDT' → 'BTC'
+                            prices[asset] = float(p.get('price', 0))
+                    prices['USDT'] = 1.0
+                    prices['BUSD'] = 1.0
+                    prices['USDC'] = 1.0
+                except Exception:
+                    pass
+
                 coins = []
+                total_equity = 0.0
                 for b in raw_balance:
+                    asset = b.get('asset', '')
                     free = float(b.get('free', 0))
                     locked = float(b.get('locked', 0))
                     bal = free + locked
-                    if bal > 0:
-                        coins.append({
-                            'coin': b.get('asset', ''),
-                            'walletBalance': str(bal),
-                            'usdValue': '0' # Binance get_balances не повертає usdValue
-                        })
+                    if bal <= 0:
+                        continue
+                    usd_price = prices.get(asset, 0)
+                    usd_value = round(bal * usd_price, 4)
+                    total_equity += usd_value
+                    coins.append({
+                        'coin': asset,
+                        'walletBalance': str(bal),
+                        'usdValue': str(usd_value)
+                    })
+
                 formatted = {
                     'list': [{
-                        'totalEquity': '0',
+                        'totalEquity': str(round(total_equity, 2)),
                         'coin': coins
                     }]
                 }
