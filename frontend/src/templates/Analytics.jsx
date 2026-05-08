@@ -131,25 +131,16 @@ function Analytics() {
 
             // Запускаємо всі запити паралельно для оптимізації швидкості
             const balancePromise = financeService.getExchangeBalance(token, selectedExchange)
-                .then(data => setBalance(data))
-                .catch(err => {
-                    console.error(`Помилка завантаження балансу для ${selectedExchange}:`, err);
-                    setBalance(null);
-                });
+                .then(data => setBalance(data?.available === false ? null : data))
+                .catch(() => setBalance(null));
 
             const spotPromise = financeService.getExchangeOrders(token, selectedExchange, 'spot')
                 .then(data => setSpotOrders(data?.result?.list || data?.list || []))
-                .catch(err => {
-                    console.error(`Помилка завантаження Spot ордерів для ${selectedExchange}:`, err);
-                    setSpotOrders([]);
-                });
+                .catch(() => setSpotOrders([]));
 
-            const futuresPromise = financeService.getExchangeOrders(token, selectedExchange, 'linear') // 'linear' для Bybit futures
+            const futuresPromise = financeService.getExchangeOrders(token, selectedExchange, 'linear')
                 .then(data => setFuturesOrders(data?.result?.list || data?.list || []))
-                .catch(err => {
-                    console.warn(`Futures ордери недоступні або сталася помилка для ${selectedExchange}:`, err);
-                    setFuturesOrders([]);
-                });
+                .catch(() => setFuturesOrders([]));
 
             await Promise.all([balancePromise, spotPromise, futuresPromise]);
         };

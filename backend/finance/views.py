@@ -543,12 +543,20 @@ class ExchangeBalanceView(views.APIView):
             return Response({'error': 'Біржа не підтримується'}, status=status.HTTP_400_BAD_REQUEST)
 
         except CryptoExchange.DoesNotExist:
-            return Response(
-                {'error': 'Підключення не знайдено'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            # Підключення не знайдено — повертаємо порожній баланс (не 404, щоб фронтенд не ламався)
+            return Response({
+                'list': [{'totalEquity': '0', 'coin': []}],
+                'available': False,
+                'error': 'Підключення не знайдено'
+            })
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            # Будь-яка помилка API (невірний ключ, немає прав) — порожній баланс
+            print(f"[ExchangeBalance] {exchange_name} error: {e}")
+            return Response({
+                'list': [{'totalEquity': '0', 'coin': []}],
+                'available': False,
+                'error': str(e)
+            })
 
 
 class ExchangeOrdersView(views.APIView):
@@ -613,15 +621,14 @@ class ExchangeOrdersView(views.APIView):
                     })
                 return Response({'list': formatted_orders})
 
-            return Response({'error': 'Біржа не підтримується'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'list': [], 'available': False, 'error': 'Біржа не підтримується'})
 
         except CryptoExchange.DoesNotExist:
-            return Response(
-                {'error': 'Підключення не знайдено'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({'list': [], 'available': False, 'error': 'Підключення не знайдено'})
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            # Futures можуть бути недоступні (немає прав або не торгується) — не 400, а порожній список
+            print(f"[ExchangeOrders] {exchange_name}/{category} error: {e}")
+            return Response({'list': [], 'available': False, 'error': str(e)})
 
 
 class BankAnalyticsView(views.APIView):

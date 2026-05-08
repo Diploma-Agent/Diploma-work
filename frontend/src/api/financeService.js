@@ -128,13 +128,11 @@ export const financeService = {
 
 	async getExchangeBalance(token, exchange) {
 		const response = await fetch(`${API_URL}/exchanges/balance/?exchange=${exchange}`, {
-			headers: {
-				'Authorization': `Bearer ${token}`,
-			},
+			headers: { 'Authorization': `Bearer ${token}` },
 		});
-
-		if (!response.ok) throw new Error('Помилка отримання балансу біржі');
-		return response.json();
+		// Завжди повертаємо JSON — бекенд повертає порожні дані при помилці API біржі
+		const data = await response.json().catch(() => ({ list: [], available: false }));
+		return data;
 	},
 
 	async getExchangeOrders(token, exchange, category = 'spot', symbol = '', settleCoin = '') {
@@ -143,13 +141,11 @@ export const financeService = {
 		if (settleCoin) url += `&settleCoin=${settleCoin}`;
 
 		const response = await fetch(url, {
-			headers: {
-				'Authorization': `Bearer ${token}`,
-			},
+			headers: { 'Authorization': `Bearer ${token}` },
 		});
-
-		if (!response.ok) throw new Error('Помилка отримання ордерів');
-		return response.json();
+		// Futures можуть бути недоступні — повертаємо порожній список без throw
+		const data = await response.json().catch(() => ({ list: [], available: false }));
+		return data;
 	},
 
 	// === ТРАНЗАКЦІЇ ===

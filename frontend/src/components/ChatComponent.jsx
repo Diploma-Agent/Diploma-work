@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import '../styles/chatStyles.css';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Відносний /api → Vite proxy локально, Django напряму в контейнері
+const API_URL = `${import.meta.env.VITE_API_BASE_URL || ''}/api`;
 
 const formatMessage = (text) => {
     const lines = text.split('\n');
