@@ -1227,3 +1227,19 @@
     vertical-align: middle;
     font-weight: 400;
 }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  .analytics-page { padding-top: 70px; }
+  .analytics-container { padding: 16px 12px; }
+  .analytics-tabs { flex-wrap: wrap; gap: 6px; }
+  .analytics-tab { font-size: 13px; padding: 8px 14px; }
+  .analytics-grid { grid-template-columns: 1fr !important; }
+  .analytics-card { padding: 16px; border-radius: 12px; }
+  .analytics-card h2, .analytics-card h3 { font-size: 18px; }
+  .accuracy-grid { grid-template-columns: 1fr 1fr; }
+  .forecast-grid { grid-template-columns: 1fr; }
+  .exchange-selector { flex-direction: column; gap: 8px; }
+  .exchange-btn { width: 100%; text-align: center; }
+  .ai-section { padding: 16px; }
+}

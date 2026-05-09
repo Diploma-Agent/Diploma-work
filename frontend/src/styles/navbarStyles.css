@@ -123,3 +123,13 @@
 		display: none;
 	}
 }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 480px) {
+  .navbar-container { padding: 10px 16px; flex-wrap: wrap; }
+  .navbar-logo { font-size: 20px; }
+  .navbar-menu { gap: 12px; order: 3; width: 100%; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+  .navbar-link { font-size: 12px; padding: 6px 4px; }
+  .navbar-username { display: none; }
+  .navbar-logout { padding: 6px 14px; font-size: 12px; }
+}

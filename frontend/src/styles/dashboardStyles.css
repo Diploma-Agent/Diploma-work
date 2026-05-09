@@ -398,3 +398,21 @@
 	0%, 100% { opacity: 1; }
 	50% { opacity: 0.4; }
 }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  .dashboard-wrapper { padding-top: 70px; }
+  .dashboard-container { padding: 16px 12px; align-items: flex-start; min-height: unset; }
+  .dashboard-main-box { width: 100%; height: auto; padding: 24px 16px; border-radius: 16px; }
+  .dashboard-title { font-size: 26px; }
+  .dashboard-subtitle { font-size: 14px; }
+  .dashboard-summary-section { flex-direction: column; gap: 16px; }
+  .dashboard-total-card { padding: 20px; border-radius: 12px; }
+  .balance-amount { font-size: 32px !important; }
+  .dashboard-quick-stats { flex-direction: column; gap: 12px; }
+  .stat-card { padding: 16px; border-radius: 12px; }
+  .dashboard-grid-2-col { grid-template-columns: 1fr !important; gap: 16px; }
+  .dashboard-widget { padding: 20px 16px; border-radius: 12px; }
+  .action-buttons { flex-direction: column; gap: 10px; }
+  .action-btn { text-align: center; }
+}

@@ -525,3 +525,11 @@
 .auth-bottom-text a:hover {
   color: #93c5fd;
 }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 480px) {
+  .auth-container { padding: 20px 16px; margin: 16px; border-radius: 16px; }
+  .auth-title { font-size: 26px; }
+  .auth-input { font-size: 16px; } /* prevent zoom on iOS */
+  .auth-btn { font-size: 15px; padding: 14px; }
+}
