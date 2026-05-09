@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/*.svg'],
+      includeAssets: ['icons/*.svg'],
       manifest: {
         name: 'BanFin — Фінансовий помічник',
         short_name: 'BanFin',
@@ -19,17 +19,29 @@ export default defineConfig({
         scope: '/',
         start_url: '/',
         icons: [
-          { src: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
-          { src: '/icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' },
-        ],
+          {
+            src: '/icons/icon-192.svg',
+            sizes: '192x192',
+            type: 'image/svg+xml'
+          },
+          {
+            src: '/icons/icon-512.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          }
+        ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        globPatterns: ['**/*.{js,css,html,svg,ico}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\/api\/finance\/transactions/,
+            urlPattern: /^\/api\/finance\/transactions/,
             handler: 'NetworkFirst',
-            options: { cacheName: 'api-transactions', expiration: { maxAgeSeconds: 300 } }
+            options: {
+              cacheName: 'api-transactions',
+              expiration: { maxAgeSeconds: 300 }
+            }
           }
         ]
       }
@@ -38,7 +50,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:8000', changeOrigin: true, secure: false }
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      }
     }
   }
 })
