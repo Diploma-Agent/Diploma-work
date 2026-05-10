@@ -125,11 +125,35 @@
 }
 
 /* ── Mobile Responsive ── */
-@media (max-width: 480px) {
-  .navbar-container { padding: 10px 16px; flex-wrap: wrap; }
+@media (max-width: 768px) {
+  .navbar-container {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 0;
+  }
   .navbar-logo { font-size: 20px; }
-  .navbar-menu { gap: 12px; order: 3; width: 100%; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
-  .navbar-link { font-size: 12px; padding: 6px 4px; }
+  .navbar-user { gap: 8px; }
   .navbar-username { display: none; }
-  .navbar-logout { padding: 6px 14px; font-size: 12px; }
+  .navbar-logout { padding: 6px 12px; font-size: 12px; }
+
+  /* Меню — другий рядок, на всю ширину */
+  .navbar-menu {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0;
+    margin-top: 6px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-wrap: nowrap; /* горизонтальний скрол замість переносу */
+  }
+  .navbar-menu::-webkit-scrollbar { display: none; }
+  .navbar-link {
+    font-size: 13px;
+    padding: 6px 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 }

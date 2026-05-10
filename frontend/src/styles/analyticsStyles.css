@@ -1230,16 +1230,112 @@
 
 /* ── Mobile Responsive ── */
 @media (max-width: 768px) {
-  .analytics-page { padding-top: 70px; }
-  .analytics-container { padding: 16px 12px; }
-  .analytics-tabs { flex-wrap: wrap; gap: 6px; }
-  .analytics-tab { font-size: 13px; padding: 8px 14px; }
-  .analytics-grid { grid-template-columns: 1fr !important; }
-  .analytics-card { padding: 16px; border-radius: 12px; }
-  .analytics-card h2, .analytics-card h3 { font-size: 18px; }
+  /* Сторінка */
+  .analytics-page {
+    padding: 70px 0 20px;
+    align-items: flex-start;
+  }
+
+  /* Контейнер — на всю ширину, без фіксованої висоти */
+  .analytics-container {
+    width: 100%;
+    height: auto;
+    min-height: unset;
+    border-radius: 0;
+    padding: 16px 14px;
+  }
+
+  /* Заголовок секції — вертикально */
+  .analytics-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+  }
+
+  .analytics-title {
+    font-size: 1.4rem;
+  }
+
+  /* Селектор біржі — на всю ширину */
+  .exchange-selector {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+  }
+  .exchange-select-input {
+    width: 100%;
+  }
+
+  /* Навігатор місяця */
+  .month-picker {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Сітка — одна колонка */
+  .analytics-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  /* Картки */
+  .analytics-card {
+    padding: 16px 14px;
+    border-radius: 12px;
+  }
+  .analytics-card h3,
+  .analytics-card .card-title {
+    font-size: 1rem;
+    gap: 8px;
+  }
+
+  /* Баланс */
+  .total-equity {
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px;
+  }
+  .total-equity .value {
+    font-size: 1.25rem;
+  }
+
+  /* Монети */
+  .coin-item {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .coin-name { width: 60px; }
+  .coin-value { margin-right: 8px; font-size: 0.85rem; }
+  .coin-usd { width: auto; font-size: 0.85rem; }
+
+  /* Ордери */
+  .order-details {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Прогноз */
+  .forecast-grid { grid-template-columns: 1fr 1fr; }
+  .forecast-value { font-size: 1.1rem; }
+  .forecast-balance { font-size: 1.4rem; }
+
+  /* Точність */
   .accuracy-grid { grid-template-columns: 1fr 1fr; }
-  .forecast-grid { grid-template-columns: 1fr; }
-  .exchange-selector { flex-direction: column; gap: 8px; }
-  .exchange-btn { width: 100%; text-align: center; }
-  .ai-section { padding: 16px; }
+
+  /* Tabs */
+  .orders-header-tabs { flex-wrap: wrap; gap: 6px; }
+  .tab-button { font-size: 13px; padding: 7px 14px; }
+
+  /* AI forecast */
+  .ai-forecast-card { padding: 18px 14px; }
+  .ai-forecast-body { padding: 14px; }
+
+  /* Рекомендації */
+  .recommendation-actions { flex-direction: column; gap: 10px; }
+  .recommendation-btn { width: 100%; }
+  .recommendation-item { flex-direction: column; gap: 8px; }
 }
