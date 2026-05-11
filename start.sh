@@ -4,6 +4,8 @@
 cleanup() {
     echo "Zupynka serveriv..."
     kill $BACKEND_PID
+    kill $CELERY_WORKER_PID
+    kill $CELERY_BEAT_PID
     kill $FRONTEND_PID
     exit
 }
@@ -23,6 +25,14 @@ fi
 
 python manage.py runserver &
 BACKEND_PID=$!
+
+echo "Zapusk Celery Worker..."
+celery -A config worker -l info &
+CELERY_WORKER_PID=$!
+
+echo "Zapusk Celery Beat..."
+celery -A config beat -l info &
+CELERY_BEAT_PID=$!
 
 # Запуск Frontend
 echo "Zapusk React Frontend..."
