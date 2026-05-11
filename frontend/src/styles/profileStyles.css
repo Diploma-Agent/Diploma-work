@@ -807,25 +807,30 @@
     color: #c4b5fd;
 }
 
-/* ── Overlay ── */
+/* ── Overlay — завжди займає весь видимий екран (Portal в body) ── */
 .instruction-overlay {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     background: rgba(0, 0, 0, 0.65);
-    z-index: 2000;
+    z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 16px;
+    box-sizing: border-box;
     backdrop-filter: blur(4px);
-    animation: overlayFadeIn 0.2s ease;
+    -webkit-backdrop-filter: blur(4px);
+    animation: overlayFadeIn 0.18s ease;
 }
 @keyframes overlayFadeIn {
     from { opacity: 0; }
     to   { opacity: 1; }
 }
 
-/* ── Попап ── */
+/* ── Попап — центрується відносно viewport ── */
 .instruction-popup {
     background: #1e293b;
     border: 1px solid rgba(102, 126, 234, 0.3);
@@ -833,12 +838,14 @@
     padding: 28px 28px 24px;
     max-width: 460px;
     width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
-    animation: popupSlideUp 0.25s cubic-bezier(0.21, 1.02, 0.24, 1);
+    animation: popupSlideUp 0.22s cubic-bezier(0.21, 1.02, 0.24, 1);
     position: relative;
 }
 @keyframes popupSlideUp {
-    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    from { opacity: 0; transform: translateY(16px) scale(0.97); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { financeService } from '../../api/financeService';
 
 /* ── Інструкції для кожної біржі ── */
@@ -48,11 +49,12 @@ const EXCHANGE_INSTRUCTIONS = {
     },
 };
 
-/* ── Попап з інструкціями ── */
+/* ── Попап з інструкціями (через Portal → завжди в центрі екрана) ── */
 const InstructionPopup = ({ exchange, onClose }) => {
     const info = EXCHANGE_INSTRUCTIONS[exchange];
     const [serverIp, setServerIp] = useState(null);
     const [ipLoading, setIpLoading] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         if (!info?.showServerIp) return;
@@ -64,9 +66,23 @@ const InstructionPopup = ({ exchange, onClose }) => {
             .finally(() => setIpLoading(false));
     }, [exchange]);
 
+    // Закрити по Escape
+    useEffect(() => {
+        const onKey = e => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
     if (!info) return null;
 
-    return (
+    const handleCopy = () => {
+        if (!serverIp) return;
+        navigator.clipboard.writeText(serverIp);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const popup = (
         <div className="instruction-overlay" onClick={onClose}>
             <div className="instruction-popup" onClick={e => e.stopPropagation()}>
                 <div className="instruction-header">
@@ -76,9 +92,7 @@ const InstructionPopup = ({ exchange, onClose }) => {
                 </div>
 
                 <ol className="instruction-steps">
-                    {info.steps.map((step, i) => (
-                        <li key={i}>{step}</li>
-                    ))}
+                    {info.steps.map((step, i) => <li key={i}>{step}</li>)}
                 </ol>
 
                 {info.showServerIp && (
@@ -90,29 +104,25 @@ const InstructionPopup = ({ exchange, onClose }) => {
                             <span
                                 className="ip-value ip-copyable"
                                 title="Натисніть, щоб скопіювати"
-                                onClick={() => { navigator.clipboard.writeText(serverIp); }}
+                                onClick={handleCopy}
                             >
-                                {serverIp} <span className="ip-copy-hint">📋</span>
+                                {serverIp}
+                                <span className="ip-copy-hint">{copied ? '✅' : '📋'}</span>
                             </span>
                         )}
                     </div>
                 )}
 
-                {info.warning && (
-                    <div className="instruction-warning">{info.warning}</div>
-                )}
+                {info.warning && <div className="instruction-warning">{info.warning}</div>}
 
-                <a
-                    href={info.link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="instruction-link"
-                >
+                <a href={info.link.url} target="_blank" rel="noopener noreferrer" className="instruction-link">
                     {info.link.label} ↗
                 </a>
             </div>
         </div>
     );
+
+    return ReactDOM.createPortal(popup, document.body);
 };
 
 /* ── Основний компонент ── */

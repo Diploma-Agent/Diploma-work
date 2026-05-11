@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 
-/* ── Інструкції для кожного банку ── */
+/* ── Інструкції для Monobank ── */
 const BANK_INSTRUCTIONS = {
     monobank: {
         icon: '🖤',
@@ -8,32 +9,26 @@ const BANK_INSTRUCTIONS = {
         steps: [
             'Відкрийте додаток Monobank на смартфоні',
             'Перейдіть: Профіль (іконка людини) → API → Видати токен',
-            'Або перейдіть за посиланням нижче та авторизуйтесь',
+            'Або натисніть посилання нижче і авторизуйтесь через вебсайт',
             'Токен дійсний безстроково — зберігайте його у безпечному місці',
-            'Скопіюйте токен і вставте в поле «API ключ» вище',
+            'Скопіюйте токен і вставте в поле «API ключ»',
         ],
         warning: null,
         link: { label: 'Відкрити Monobank API', url: 'https://api.monobank.ua/' },
     },
-    pumb: {
-        icon: '🔵',
-        title: 'Як підключити ПУМБ',
-        steps: [
-            'Введіть назву підключення та ваш токен доступу ПУМБ',
-            'Після збереження система автоматично перевірить токен',
-            'Якщо токен не відомий — зверніться до підтримки ПУМБ або інтернет-банкінгу',
-            'Токен оновлюється автоматично кожні 24 години',
-        ],
-        warning: '⚠️ ПУМБ API є тестовим — для реального доступу потрібна домовленість з банком.',
-        link: { label: 'Відкрити ПУМБ Developer Portal', url: 'https://developer.pumb.ua/' },
-    },
 };
 
-/* ── Попап з інструкціями ── */
+/* ── Попап (через Portal → завжди в центрі видимого екрана) ── */
 const InstructionPopup = ({ bankType, onClose }) => {
     const info = BANK_INSTRUCTIONS[bankType] || BANK_INSTRUCTIONS.monobank;
 
-    return (
+    useEffect(() => {
+        const onKey = e => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    const popup = (
         <div className="instruction-overlay" onClick={onClose}>
             <div className="instruction-popup" onClick={e => e.stopPropagation()}>
                 <div className="instruction-header">
@@ -43,26 +38,19 @@ const InstructionPopup = ({ bankType, onClose }) => {
                 </div>
 
                 <ol className="instruction-steps">
-                    {info.steps.map((step, i) => (
-                        <li key={i}>{step}</li>
-                    ))}
+                    {info.steps.map((step, i) => <li key={i}>{step}</li>)}
                 </ol>
 
-                {info.warning && (
-                    <div className="instruction-warning">{info.warning}</div>
-                )}
+                {info.warning && <div className="instruction-warning">{info.warning}</div>}
 
-                <a
-                    href={info.link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="instruction-link"
-                >
+                <a href={info.link.url} target="_blank" rel="noopener noreferrer" className="instruction-link">
                     {info.link.label} ↗
                 </a>
             </div>
         </div>
     );
+
+    return ReactDOM.createPortal(popup, document.body);
 };
 
 /* ── Основний компонент ── */
@@ -79,30 +67,25 @@ const BanksTab = ({
 }) => {
     const [showInstruction, setShowInstruction] = useState(false);
 
-    const bankLogos = {
-        monobank: '/images/monobank.png',
-        pumb: '/images/pumb.png',
-    };
-
     const getBankIcon = (bankType) => {
-        if (!bankType) return <span style={{ fontSize: '32px' }}>🏦</span>;
-        const logo = bankLogos[bankType.toLowerCase()];
-        if (!logo) return <span style={{ fontSize: '32px' }}>🏦</span>;
-        return (
-            <img src={logo} alt={bankType} className="bank-logo"
-                onError={e => {
-                    e.target.onerror = null; e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = '<span style="font-size:32px">🏦</span>';
-                }}
-            />
-        );
+        if (bankType?.toLowerCase() === 'monobank') {
+            return (
+                <img src="/images/monobank.png" alt="monobank" className="bank-logo"
+                    onError={e => {
+                        e.target.onerror = null; e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = '<span style="font-size:32px">🏦</span>';
+                    }}
+                />
+            );
+        }
+        return <span style={{ fontSize: '32px' }}>🏦</span>;
     };
 
     return (
         <div className="banks-section">
             {showInstruction && (
                 <InstructionPopup
-                    bankType={bankForm.type}
+                    bankType="monobank"
                     onClose={() => setShowInstruction(false)}
                 />
             )}
@@ -116,7 +99,6 @@ const BanksTab = ({
 
             {showAddBank && (
                 <form onSubmit={handleAddBank} className="add-form">
-                    {/* Рядок: вибір банку + кнопка інструкції */}
                     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                         <label className="profile-label" style={{ flex: 1 }}>
                             <span>Тип банку</span>
@@ -127,7 +109,6 @@ const BanksTab = ({
                                 onChange={onBankChange}
                             >
                                 <option value="monobank">Monobank</option>
-                                <option value="pumb">ПУМБ</option>
                             </select>
                         </label>
                         <button
@@ -150,7 +131,7 @@ const BanksTab = ({
                     <label className="profile-label">
                         <span>API ключ / Токен</span>
                         <input className="profile-input" name="apiKey" type="password"
-                            placeholder="Введіть API ключ або токен банку"
+                            placeholder="Введіть токен з додатку Monobank"
                             value={bankForm.apiKey} onChange={onBankChange} required />
                     </label>
 
@@ -169,7 +150,7 @@ const BanksTab = ({
                     <div className="empty-state">
                         <span className="empty-icon">🏦</span>
                         <p>Ще немає підключених банків</p>
-                        <p className="empty-hint">Додайте банк для автоматичної синхронізації транзакцій</p>
+                        <p className="empty-hint">Додайте Monobank для автоматичної синхронізації транзакцій</p>
                     </div>
                 ) : banks.map(bank => (
                     <div key={bank.id} className="item-card">
