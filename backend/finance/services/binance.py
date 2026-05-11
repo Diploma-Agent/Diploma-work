@@ -254,6 +254,7 @@ class BinanceService:
                             user=crypto_exchange.user,
                             source='binance',
                             source_id=transaction_id,
+                            connection_id=crypto_exchange.id,
                             amount=quote_qty,
                             currency='USDT',
                             type=trans_type,

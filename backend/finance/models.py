@@ -87,7 +87,6 @@ class BankConnection(models.Model):
     
     class Meta:
         db_table = 'bank_connections'
-        unique_together = ['user', 'bank_name']
         verbose_name = 'Bank Connection'
         verbose_name_plural = 'Bank Connections'
     
@@ -128,7 +127,6 @@ class CryptoExchange(models.Model):
     
     class Meta:
         db_table = 'crypto_exchanges'
-        unique_together = ['user', 'exchange_name']
         verbose_name = 'Crypto Exchange'
         verbose_name_plural = 'Crypto Exchanges'
     
@@ -201,9 +199,12 @@ class Transaction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Зв'язок з конкретним підключенням (bank або exchange)
+    connection_id = models.IntegerField(null=True, blank=True)  # BankConnection.id або CryptoExchange.id
+
     # Метадані
     raw_data = models.JSONField(blank=True, null=True)  # Повні дані з API
-    
+
     class Meta:
         db_table = 'transactions'
         indexes = [

@@ -6,7 +6,7 @@ from .views import (
     PUMBAuthInitView, PUMBAuthCallbackView,
     ExchangeBalanceView, ExchangeOrdersView, BankAnalyticsView,
     AIAnalystView, AIInvestmentView, AIForecastView, AIAnomalyView, AIChatView,
-    ChatHistoryView
+    ChatHistoryView, UserAccountsView
 )
 
 app_name = 'finance'
@@ -40,6 +40,9 @@ urlpatterns = [
     # Sync logs
     path('sync-logs/', SyncLogListView.as_view(), name='sync_log_list'),
     
+    # All user accounts (banks + exchanges combined) for filters
+    path('accounts/', UserAccountsView.as_view(), name='user_accounts'),
+
     # Analytics
     path('analytics/bank/', BankAnalyticsView.as_view(), name='bank_analytics'),
     

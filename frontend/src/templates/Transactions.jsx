@@ -2,34 +2,59 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useFinance } from '../context/FinanceContext';
+import { financeService } from '../api/financeService';
 import '../styles/transactionsStyles.css';
+
+const SOURCE_ICONS = {
+	monobank: '🏦',
+	binance:  '₿',
+	bybit:    '📊',
+	okx:      '🔷',
+	manual:   '✍️',
+};
 
 function Transactions() {
 	const [transactions, setTransactions] = useState([]);
 	const [filteredTransactions, setFilteredTransactions] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
+
+	// Список акаунтів для фільтра
+	const [accounts, setAccounts] = useState([]);
+	// Вибрані ID акаунтів (порожній масив = всі)
+	const [selectedIds, setSelectedIds] = useState([]);
+
 	const [filters, setFilters] = useState({
 		search: '',
 		type: 'all',
-		source: 'all',
 		dateFrom: '',
 		dateTo: '',
 	});
+
 	const navigate = useNavigate();
 	const { getTransactions } = useFinance();
+
+	// Завантажуємо список акаунтів один раз
+	useEffect(() => {
+		const token = localStorage.getItem('token');
+		if (!token) return;
+		financeService.getAccounts(token)
+			.then(data => setAccounts(data || []))
+			.catch(() => setAccounts([]));
+	}, []);
 
 	const fetchTransactions = useCallback(async () => {
 		try {
 			const token = localStorage.getItem('token');
 			if (!token) { navigate('/login'); return; }
 
-			// Дані з кешу або API (повторний перехід = миттєво)
 			const data = await getTransactions(
-				filters.source,
+				'all',
 				30,
 				filters.dateFrom,
-				filters.dateTo
+				filters.dateTo,
+				selectedIds,       // connection_ids
+				[]
 			);
 			setTransactions(data);
 			setFilteredTransactions(data);
@@ -38,13 +63,13 @@ function Transactions() {
 		} finally {
 			setLoading(false);
 		}
-	}, [navigate, getTransactions, filters.source, filters.dateFrom, filters.dateTo]);
+	}, [navigate, getTransactions, filters.dateFrom, filters.dateTo, selectedIds]);
 
 	const applyFilters = useCallback(() => {
 		let filtered = [...transactions];
 
 		if (filters.search) {
-			filtered = filtered.filter(t => 
+			filtered = filtered.filter(t =>
 				t.description?.toLowerCase().includes(filters.search.toLowerCase()) ||
 				t.counterparty?.toLowerCase().includes(filters.search.toLowerCase())
 			);
@@ -54,59 +79,36 @@ function Transactions() {
 			filtered = filtered.filter(t => t.type === filters.type);
 		}
 
-		if (filters.source !== 'all') {
-			filtered = filtered.filter(t => t.source === filters.source);
-		}
-
-		if (filters.dateFrom) {
-			filtered = filtered.filter(t => 
-				new Date(t.transaction_date) >= new Date(filters.dateFrom)
-			);
-		}
-
-		if (filters.dateTo) {
-			filtered = filtered.filter(t => 
-				new Date(t.transaction_date) <= new Date(filters.dateTo)
-			);
-		}
-
 		setFilteredTransactions(filtered);
 	}, [transactions, filters]);
 
-	useEffect(() => {
-        fetchTransactions();
-    }, [fetchTransactions]);
-
-	useEffect(() => {
-		applyFilters();
-	}, [applyFilters]);
+	useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
+	useEffect(() => { applyFilters(); }, [applyFilters]);
 
 	const handleFilterChange = (e) => {
 		setFilters({ ...filters, [e.target.name]: e.target.value });
 	};
 
-	const getTransactionIcon = (type) => {
-		switch (type) {
-			case 'income': return '💰';
-			case 'expense': return '🛒';
-			case 'transfer': return '💸';
-			case 'trade': return '📈';
-			case 'deposit': return '💵';
-			case 'withdrawal': return '💸';
-			default: return '💳';
-		}
+	// Тогл окремого акаунта
+	const toggleAccount = (id) => {
+		setSelectedIds(prev =>
+			prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+		);
 	};
 
-	const getSourceIcon = (source) => {
-		const icons = {
-			monobank: '🏦',
-			pumb: '🏛️',
-			binance: '₿',
-			bybit: '📊',
-			okx: '🔷',
-			manual: '✍️',
-		};
-		return icons[source] || '💼';
+	// «Всі» — скидаємо вибір
+	const selectAll = () => setSelectedIds([]);
+
+	const getTransactionIcon = (type) => {
+		switch (type) {
+			case 'income':     return '💰';
+			case 'expense':    return '🛒';
+			case 'transfer':   return '💸';
+			case 'trade':      return '📈';
+			case 'deposit':    return '💵';
+			case 'withdrawal': return '💸';
+			default:           return '💳';
+		}
 	};
 
 	if (loading) {
@@ -138,6 +140,30 @@ function Transactions() {
 					{error && <div className="transactions-error">{error}</div>}
 
 					<div className="transactions-filters">
+						{/* ── Фільтр по акаунтах (chips) ── */}
+						{accounts.length > 0 && (
+							<div className="filter-group filter-group--full">
+								<label className="filter-label">Акаунт</label>
+								<div className="account-chips">
+									<button
+										className={`account-chip ${selectedIds.length === 0 ? 'account-chip--active' : ''}`}
+										onClick={selectAll}
+									>
+										Всі
+									</button>
+									{accounts.map(acc => (
+										<button
+											key={acc.id}
+											className={`account-chip ${selectedIds.includes(acc.id) ? 'account-chip--active' : ''}`}
+											onClick={() => toggleAccount(acc.id)}
+										>
+											{SOURCE_ICONS[acc.source] || '💼'} {acc.name}
+										</button>
+									))}
+								</div>
+							</div>
+						)}
+
 						<div className="filter-group">
 							<label className="filter-label">Пошук</label>
 							<input
@@ -163,23 +189,6 @@ function Transactions() {
 								<option value="expense">Витрата</option>
 								<option value="transfer">Переказ</option>
 								<option value="trade">Торгівля</option>
-							</select>
-						</div>
-
-						<div className="filter-group">
-							<label className="filter-label">Джерело</label>
-							<select
-								name="source"
-								value={filters.source}
-								onChange={handleFilterChange}
-								className="filter-select"
-							>
-								<option value="all">Всі джерела</option>
-								<option value="monobank">Monobank</option>
-								<option value="pumb">ПУМБ</option>
-								<option value="binance">Binance</option>
-								<option value="bybit">Bybit</option>
-								<option value="manual">Вручну</option>
 							</select>
 						</div>
 
@@ -212,7 +221,7 @@ function Transactions() {
 								<span className="empty-icon">📭</span>
 								<p>Транзакцій не знайдено</p>
 								<p className="empty-hint">
-									{transactions.length === 0 
+									{transactions.length === 0
 										? 'Додайте банк в налаштуваннях профілю для автоматичної синхронізації транзакцій'
 										: 'Спробуйте змінити фільтри пошуку'}
 								</p>
@@ -244,7 +253,7 @@ function Transactions() {
 											</div>
 											<div className="transaction-meta">
 												<span className="transaction-source">
-													{getSourceIcon(transaction.source)} {transaction.source}
+													{SOURCE_ICONS[transaction.source] || '💼'} {transaction.source}
 												</span>
 												{transaction.counterparty && (
 													<span className="transaction-counterparty">

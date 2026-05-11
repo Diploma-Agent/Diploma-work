@@ -26,7 +26,7 @@ class CryptoExchangeSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = CryptoExchange
-        fields = ('id', 'exchange_name', 'status', 'account_name', 'last_sync', 'created_at')
+        fields = ('id', 'name', 'exchange_name', 'status', 'account_name', 'last_sync', 'created_at')
         read_only_fields = ('id', 'status', 'last_sync', 'created_at')
 
 
@@ -56,7 +56,7 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = (
-            'id', 'source', 'type', 'category', 'category_name',
+            'id', 'source', 'connection_id', 'type', 'category', 'category_name',
             'amount', 'currency', 'description', 'counterparty',
             'transaction_date', 'created_at'
         )

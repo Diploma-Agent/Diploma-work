@@ -101,6 +101,45 @@
     border-top: 2px solid rgba(255, 255, 255, 0.15);
 }
 
+/* Chips для вибору банківських акаунтів в аналітиці */
+.bank-account-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 4px;
+    width: 100%;
+}
+
+/* Перевикористовуємо стилі з Transactions */
+.analytics-header .account-chip,
+.bank-account-chips .account-chip {
+    padding: 6px 14px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 2px solid rgba(148, 163, 184, 0.2);
+    border-radius: 20px;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.analytics-header .account-chip:hover,
+.bank-account-chips .account-chip:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #e2e8f0;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.analytics-header .account-chip--active,
+.bank-account-chips .account-chip--active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.2));
+    border-color: #3b82f6;
+    color: #93c5fd;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+}
+
 .page-title {
     font-size: 2.5rem;
     font-weight: 700;

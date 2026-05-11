@@ -50,6 +50,8 @@ class MonobankService:
                 existing.category_id  = t.get('category_id')
                 existing.amount       = amount_float
                 existing.raw_data     = t
+                if not existing.connection_id:
+                    existing.connection_id = connection.id
                 existing.save()
                 updated += 1
             else:
@@ -57,6 +59,7 @@ class MonobankService:
                     user=self.user,
                     source='monobank',
                     source_id=source_id,
+                    connection_id=connection.id,
                     type=t.get('type'),
                     amount=amount_float,
                     currency=t.get('currency', 'UAH'),

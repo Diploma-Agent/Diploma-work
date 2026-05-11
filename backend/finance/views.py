@@ -81,15 +81,13 @@ class AddBankConnectionView(views.APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # Створюємо або оновлюємо підключення
-        bank_connection, created = BankConnection.objects.update_or_create(
+        # Завжди створюємо нове підключення (старе залишається)
+        bank_connection = BankConnection.objects.create(
             user=request.user,
             bank_name=bank_name,
-            defaults={
-                'name': name or bank_name.capitalize(),
-                'access_token': access_token,
-                'status': 'active'
-            }
+            name=name or bank_name.capitalize(),
+            access_token=access_token,
+            status='active'
         )
 
         # Запускаємо початкову синхронізацію у фоні через Celery
@@ -100,7 +98,7 @@ class AddBankConnectionView(views.APIView):
 
         return Response(
             BankConnectionSerializer(bank_connection).data,
-            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+            status=status.HTTP_201_CREATED
         )
 
 
@@ -117,10 +115,9 @@ class DeleteBankConnectionView(views.APIView):
     def delete(self, request, pk):
         try:
             connection = BankConnection.objects.get(pk=pk, user=request.user)
-            source = connection.bank_name  # 'monobank'
-            # Видаляємо всі транзакції цього банку
+            # Видаляємо тільки транзакції цього конкретного підключення
             deleted_count, _ = Transaction.objects.filter(
-                user=request.user, source=source
+                user=request.user, connection_id=connection.id
             ).delete()
             connection.delete()
             return Response(
@@ -183,16 +180,16 @@ class AddCryptoExchangeView(views.APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        exchange, created = CryptoExchange.objects.update_or_create(
+        # Завжди створюємо нове підключення (старе залишається)
+        exchange = CryptoExchange.objects.create(
             user=request.user,
             exchange_name=exchange_name,
-            defaults={
-                'api_key': api_key,
-                'api_secret': api_secret,
-                'api_passphrase': api_passphrase,
-                'status': 'active'
-            }
+            api_key=api_key,
+            api_secret=api_secret,
+            api_passphrase=api_passphrase,
+            status='active'
         )
+        created = True
 
         # Запускаємо початкову синхронізацію у фоні через Celery
         try:
@@ -219,10 +216,9 @@ class DeleteCryptoExchangeView(views.APIView):
     def delete(self, request, pk):
         try:
             exchange = CryptoExchange.objects.get(pk=pk, user=request.user)
-            source = exchange.exchange_name  # 'binance' / 'bybit' / 'okx'
-            # Видаляємо всі транзакції цієї біржі
+            # Видаляємо тільки транзакції цього конкретного підключення
             deleted_count, _ = Transaction.objects.filter(
-                user=request.user, source=source
+                user=request.user, connection_id=exchange.id
             ).delete()
             exchange.delete()
             return Response(
@@ -240,7 +236,11 @@ class TransactionListView(views.APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
+        # Підтримуємо як одне джерело ('source'), так і список ('sources' через кому)
+        # та фільтр по конкретних підключеннях ('connection_ids' через кому)
         source = request.query_params.get('source', 'all')
+        sources_param = request.query_params.get('sources', '')          # "monobank,binance"
+        connection_ids_param = request.query_params.get('connection_ids', '')  # "1,3,5"
         date_from = request.query_params.get('date_from')
         date_to = request.query_params.get('date_to')
 
@@ -249,25 +249,61 @@ class TransactionListView(views.APIView):
 
         # 2. Якщо клієнт передав дати, фільтруємо по них
         if date_from and date_to:
-            # Додаємо час до date_to, щоб захопити весь останній день включно
             queryset = queryset.filter(
                 transaction_date__gte=date_from,
                 transaction_date__lte=f"{date_to}T23:59:59"
             )
-        # 3. Якщо дат немає, працює дефолтна логіка (останні 30 днів)
         else:
             days = int(request.query_params.get('days', 30))
             limit_date = timezone.now() - timedelta(days=days)
             queryset = queryset.filter(transaction_date__gte=limit_date)
-        
-        # 4. Фільтр по джерелу
-        if source != 'all':
+
+        # 3. Фільтр по підключеннях (пріоритет: connection_ids > sources > source)
+        if connection_ids_param:
+            try:
+                ids = [int(i) for i in connection_ids_param.split(',') if i.strip()]
+                if ids:
+                    queryset = queryset.filter(connection_id__in=ids)
+            except (ValueError, TypeError):
+                pass
+        elif sources_param:
+            sources_list = [s.strip() for s in sources_param.split(',') if s.strip()]
+            if sources_list:
+                queryset = queryset.filter(source__in=sources_list)
+        elif source != 'all':
             queryset = queryset.filter(source=source)
-            
+
         transactions = queryset.order_by('-transaction_date')
         serializer = TransactionSerializer(transactions, many=True)
-        
         return Response(serializer.data)
+
+
+class UserAccountsView(views.APIView):
+    """Повертає всі підключені акаунти користувача (банки + біржі) для фільтрів"""
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        banks = BankConnection.objects.filter(user=request.user, status='active')
+        exchanges = CryptoExchange.objects.filter(user=request.user, status='active')
+
+        accounts = []
+        for b in banks:
+            accounts.append({
+                'id': b.id,
+                'name': b.name or b.bank_name.capitalize(),
+                'source': b.bank_name,
+                'type': 'bank',
+                'status': b.status,
+            })
+        for e in exchanges:
+            accounts.append({
+                'id': e.id,
+                'name': e.name or e.exchange_name.capitalize(),
+                'source': e.exchange_name,
+                'type': 'exchange',
+                'status': e.status,
+            })
+        return Response(accounts)
 
 
 class SyncView(views.APIView):

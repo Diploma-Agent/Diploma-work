@@ -148,12 +148,29 @@ export const financeService = {
 		return data;
 	},
 
+	// === АКАУНТИ (банки + біржі разом для фільтрів) ===
+	async getAccounts(token) {
+		const response = await fetch(`${API_URL}/accounts/`, {
+			headers: { 'Authorization': `Bearer ${token}` },
+		});
+		if (!response.ok) throw new Error('Помилка отримання акаунтів');
+		return response.json();
+	},
+
 	// === ТРАНЗАКЦІЇ ===
-	async getTransactions(token, source = 'all', days = 30, dateFrom = '', dateTo = '') {
-        // Формуємо базовий URL
-        let url = `${API_URL}/transactions/?source=${source}&days=${days}`;
-        
-        // Додаємо дати, якщо вони є
+	// connectionIds — масив числових ID (BankConnection.id / CryptoExchange.id)
+	// sources — масив рядків ('monobank', 'binance', ...)
+	async getTransactions(token, source = 'all', days = 30, dateFrom = '', dateTo = '', connectionIds = [], sources = []) {
+        let url = `${API_URL}/transactions/?days=${days}`;
+
+        if (connectionIds.length > 0) {
+            url += `&connection_ids=${connectionIds.join(',')}`;
+        } else if (sources.length > 0) {
+            url += `&sources=${sources.join(',')}`;
+        } else if (source !== 'all') {
+            url += `&source=${source}`;
+        }
+
         if (dateFrom) url += `&date_from=${dateFrom}`;
         if (dateTo) url += `&date_to=${dateTo}`;
 

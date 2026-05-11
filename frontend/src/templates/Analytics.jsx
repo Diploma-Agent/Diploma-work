@@ -24,6 +24,8 @@ function Analytics() {
     const [activeTab, setActiveTab] = useState('spot');
 
     // --- State для Банку ---
+    const [banks, setBanks] = useState([]);
+    const [selectedBankIds, setSelectedBankIds] = useState([]); // [] = всі
     const [bankAnalytics, setBankAnalytics] = useState(null);
     const [bankLoading, setBankLoading] = useState(false);
     const [forecastData, setForecastData] = useState(null);
@@ -45,7 +47,7 @@ function Analytics() {
     const [hoveredLegendIdx, setHoveredLegendIdx] = useState(null);
 
     // Завантаження банківських даних для вибраного місяця
-    const loadBankDataForPeriod = async (month, year) => {
+    const loadBankDataForPeriod = async (month, year, bankIds = []) => {
         const token = localStorage.getItem('token');
         if (!token) return;
         setBankLoading(true);
@@ -55,8 +57,13 @@ function Analytics() {
 
             let bankData;
             if (isCurrentMonth) {
-                // Поточний місяць — беремо через analytics endpoint (містить реальний баланс)
-                bankData = await financeService.getBankAnalytics(token);
+                // Поточний місяць — беремо через analytics endpoint + транзакції з фільтром
+                const [analyticsData, txList] = await Promise.all([
+                    financeService.getBankAnalytics(token).catch(() => ({ balance: 0 })),
+                    financeService.getTransactions(token, 'all', 31, '', '', bankIds, [])
+                ]);
+                const transactions = Array.isArray(txList) ? txList : (txList?.transactions || []);
+                bankData = { balance: analyticsData.balance, transactions };
             } else {
                 // Минулий місяць — беремо транзакції за конкретний діапазон + поточний баланс
                 const mm       = String(month + 1).padStart(2, '0');
@@ -66,7 +73,7 @@ function Analytics() {
 
                 const [analyticsData, txList] = await Promise.all([
                     financeService.getBankAnalytics(token).catch(() => ({ balance: 0 })),
-                    financeService.getTransactions(token, 'all', 31, dateFrom, dateTo)
+                    financeService.getTransactions(token, 'all', 31, dateFrom, dateTo, bankIds, [])
                 ]);
 
                 const transactions = Array.isArray(txList)
@@ -100,22 +107,26 @@ function Analytics() {
                 })
                 .catch(() => setError('Не вдалося завантажити список бірж'));
 
+            const fetchBanks = financeService.getBanks(token)
+                .then(list => setBanks(list || []))
+                .catch(() => setBanks([]));
+
             setForecastLoading(true);
             const fetchForecast = financeService.aiForecast(token, 30)
                 .then(data => setForecastData(data))
                 .catch(err => console.error('Помилка AI прогнозу:', err))
                 .finally(() => setForecastLoading(false));
 
-            await Promise.all([fetchExchanges, loadBankDataForPeriod(selectedMonth, selectedYear), fetchForecast]);
+            await Promise.all([fetchExchanges, fetchBanks, loadBankDataForPeriod(selectedMonth, selectedYear, []), fetchForecast]);
             setLoading(false);
         };
         initData();
     }, [navigate]);
 
-    // 2. Перезавантаження банку при зміні місяця/року
+    // 2. Перезавантаження банку при зміні місяця/року або вибраних банків
     useEffect(() => {
-        if (!loading) loadBankDataForPeriod(selectedMonth, selectedYear);
-    }, [selectedMonth, selectedYear]);
+        if (!loading) loadBankDataForPeriod(selectedMonth, selectedYear, selectedBankIds);
+    }, [selectedMonth, selectedYear, selectedBankIds]);
 
     // 2. Завантаження даних конкретної біржі при зміні вибору
     useEffect(() => {
@@ -403,6 +414,30 @@ function Analytics() {
                         {/* Секція Банку */}
                         <div className="analytics-header analytics-header--bank">
                             <h1 className="analytics-title">🏦 Аналітика Банку</h1>
+
+                            {/* Фільтр по підключеним банкам */}
+                            {banks.length > 1 && (
+                                <div className="bank-account-chips">
+                                    <button
+                                        className={`account-chip ${selectedBankIds.length === 0 ? 'account-chip--active' : ''}`}
+                                        onClick={() => setSelectedBankIds([])}
+                                    >
+                                        Всі банки
+                                    </button>
+                                    {banks.map(b => (
+                                        <button
+                                            key={b.id}
+                                            className={`account-chip ${selectedBankIds.includes(b.id) ? 'account-chip--active' : ''}`}
+                                            onClick={() => setSelectedBankIds(prev =>
+                                                prev.includes(b.id) ? prev.filter(x => x !== b.id) : [...prev, b.id]
+                                            )}
+                                        >
+                                            🏦 {b.name || b.bank_name}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
                             <div className="month-picker">
                                 <button
                                     className="month-nav-btn"

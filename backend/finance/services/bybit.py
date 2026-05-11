@@ -202,6 +202,7 @@ class BybitService:
                     user=crypto_exchange.user,
                     source='bybit',
                     source_id=transaction_id,
+                    connection_id=crypto_exchange.id,
                     amount=value / 1e8,  # Bybit uses satoshi units
                     currency='USDT',
                     type=trans_type,

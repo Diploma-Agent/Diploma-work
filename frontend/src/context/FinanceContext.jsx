@@ -30,10 +30,12 @@ export function FinanceProvider({ children }) {
 
     // ── Публічні методи ────────────────────────────────────────────────────────
 
-    const getTransactions = useCallback((source = 'all', days = 30, dateFrom = '', dateTo = '') => {
-        const key = `tx:${source}:${days}:${dateFrom}:${dateTo}`;
+    const getTransactions = useCallback((source = 'all', days = 30, dateFrom = '', dateTo = '', connectionIds = [], sources = []) => {
+        const idsKey = connectionIds.length > 0 ? connectionIds.sort().join(',') : '';
+        const srcKey = sources.length > 0 ? sources.sort().join(',') : source;
+        const key = `tx:${srcKey}:${days}:${dateFrom}:${dateTo}:${idsKey}`;
         return withCache(key, () =>
-            financeService.getTransactions(getToken(), source, days, dateFrom, dateTo)
+            financeService.getTransactions(getToken(), source, days, dateFrom, dateTo, connectionIds, sources)
         );
     }, [withCache]);
 
