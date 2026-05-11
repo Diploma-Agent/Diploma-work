@@ -786,6 +786,206 @@
 	}
 }
 
+/* ── Кнопка «Інструкція» біля селектора ── */
+.instruction-trigger-btn {
+    padding: 10px 16px;
+    background: rgba(102, 126, 234, 0.12);
+    border: 1.5px solid rgba(102, 126, 234, 0.35);
+    border-radius: 8px;
+    color: #a5b4fc;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    height: 44px;
+    align-self: flex-end;
+}
+.instruction-trigger-btn:hover {
+    background: rgba(102, 126, 234, 0.22);
+    border-color: rgba(102, 126, 234, 0.6);
+    color: #c4b5fd;
+}
+
+/* ── Overlay ── */
+.instruction-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    backdrop-filter: blur(4px);
+    animation: overlayFadeIn 0.2s ease;
+}
+@keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ── Попап ── */
+.instruction-popup {
+    background: #1e293b;
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 18px;
+    padding: 28px 28px 24px;
+    max-width: 460px;
+    width: 100%;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    animation: popupSlideUp 0.25s cubic-bezier(0.21, 1.02, 0.24, 1);
+    position: relative;
+}
+@keyframes popupSlideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.instruction-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.instruction-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+.instruction-title {
+    flex: 1;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+.instruction-close {
+    background: rgba(255,255,255,0.08);
+    border: none;
+    color: #94a3b8;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s, color 0.2s;
+}
+.instruction-close:hover {
+    background: rgba(239,68,68,0.2);
+    color: #f87171;
+}
+
+.instruction-steps {
+    margin: 0 0 16px 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.instruction-steps li {
+    color: #cbd5e1;
+    font-size: 14px;
+    line-height: 1.55;
+}
+.instruction-steps li::marker {
+    color: #667eea;
+    font-weight: 700;
+}
+
+/* ── IP сервера ── */
+.instruction-server-ip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.ip-label {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.ip-value {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: #67e8f9;
+    letter-spacing: 0.5px;
+}
+.ip-loading {
+    color: #64748b;
+    font-style: italic;
+}
+.ip-copyable {
+    cursor: pointer;
+    padding: 4px 10px;
+    background: rgba(103, 232, 249, 0.08);
+    border-radius: 6px;
+    border: 1px solid rgba(103, 232, 249, 0.2);
+    transition: background 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.ip-copyable:hover {
+    background: rgba(103, 232, 249, 0.16);
+}
+.ip-copy-hint {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+/* ── Попередження ── */
+.instruction-warning {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-left: 3px solid #fbbf24;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #fde68a;
+    margin-bottom: 14px;
+    line-height: 1.5;
+}
+
+/* ── Посилання ── */
+.instruction-link {
+    display: inline-block;
+    padding: 9px 18px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 8px;
+    color: #a5b4fc;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.instruction-link:hover {
+    background: rgba(102, 126, 234, 0.25);
+    color: #c4b5fd;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .instruction-popup {
+        padding: 20px 18px;
+        border-radius: 14px;
+    }
+    .instruction-title { font-size: 15px; }
+    .instruction-steps li { font-size: 13px; }
+}
+
 /* ── Mobile Responsive ── */
 @media (max-width: 768px) {
   .profile-page { padding-top: 70px; }
