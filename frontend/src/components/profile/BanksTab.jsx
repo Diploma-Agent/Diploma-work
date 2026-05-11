@@ -191,17 +191,16 @@ const BanksTab = ({
                     </div>
                 ))}
             </div>
-        </div>
 
-        {banks.length > 0 && (
-            <p style={{
-                marginTop: 16, textAlign: 'center',
-                fontSize: 12, color: '#475569',
-            }}>
-                🔄 Транзакції оновлюються автоматично щогодини. Кнопка ↻ — лише для примусового оновлення.
-            </p>
-        )}
-    </div>
+            {banks.length > 0 && (
+                <p style={{
+                    marginTop: 16, textAlign: 'center',
+                    fontSize: 12, color: '#475569',
+                }}>
+                    🔄 Транзакції оновлюються автоматично щогодини. Кнопка ↻ — лише для примусового оновлення.
+                </p>
+            )}
+        </div>
     );
 };
 
