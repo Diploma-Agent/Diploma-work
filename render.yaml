@@ -118,7 +118,8 @@ services:
       - key: VITE_API_BASE_URL
         sync: false
 
-# ── Redis (Managed) ───────────────────────────────────────────────────────────
-databases:
-  - name: diploma-redis
+  # ── Redis (Managed) ──────────────────────────────────────────────────────────
+  - type: redis
+    name: diploma-redis
     plan: free
+    ipAllowList: []
