@@ -306,7 +306,9 @@ const TokensTab = () => {
                         <p>Ще немає доданих API ключів</p>
                         <p className="empty-hint">Додайте ключі бірж для відстеження балансів</p>
                     </div>
-                ) : tokens.map(token => (
+                ) : (
+                <>
+                {tokens.map(token => (
                     <div key={token.id} className="item-card">
                         <div className="item-icon">{getExchangeIcon(token.exchange_name)}</div>
                         <div className="item-info">
@@ -322,11 +324,20 @@ const TokensTab = () => {
                                 {token.status === 'active' ? '● Активний' : '○ Неактивний'}
                             </span>
                         </div>
-                        <button onClick={() => handleRemoveToken(token.id)} className="remove-button" title="Видалити">
+                        <button
+                            onClick={() => handleRemoveToken(token.id)}
+                            className="remove-button"
+                            title="Видалити підключення та пов'язані транзакції"
+                        >
                             🗑️
                         </button>
                     </div>
                 ))}
+                <p style={{ marginTop: 16, textAlign: 'center', fontSize: 12, color: '#475569' }}>
+                    🔄 Транзакції оновлюються автоматично щогодини.
+                </p>
+                </>
+                )}
             </div>
         </div>
     );

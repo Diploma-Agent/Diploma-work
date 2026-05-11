@@ -117,8 +117,16 @@ class DeleteBankConnectionView(views.APIView):
     def delete(self, request, pk):
         try:
             connection = BankConnection.objects.get(pk=pk, user=request.user)
+            source = connection.bank_name  # 'monobank'
+            # Видаляємо всі транзакції цього банку
+            deleted_count, _ = Transaction.objects.filter(
+                user=request.user, source=source
+            ).delete()
             connection.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(
+                {'deleted_transactions': deleted_count},
+                status=status.HTTP_204_NO_CONTENT
+            )
         except BankConnection.DoesNotExist:
             return Response(
                 {'error': 'Підключення не знайдено'},
@@ -211,8 +219,16 @@ class DeleteCryptoExchangeView(views.APIView):
     def delete(self, request, pk):
         try:
             exchange = CryptoExchange.objects.get(pk=pk, user=request.user)
+            source = exchange.exchange_name  # 'binance' / 'bybit' / 'okx'
+            # Видаляємо всі транзакції цієї біржі
+            deleted_count, _ = Transaction.objects.filter(
+                user=request.user, source=source
+            ).delete()
             exchange.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(
+                {'deleted_transactions': deleted_count},
+                status=status.HTTP_204_NO_CONTENT
+            )
         except CryptoExchange.DoesNotExist:
             return Response(
                 {'error': 'Підключення не знайдено'},

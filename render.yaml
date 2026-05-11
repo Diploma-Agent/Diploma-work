@@ -69,7 +69,8 @@ services:
     env: docker
     dockerfilePath: ./backend/Dockerfile
     plan: free
-    dockerCommand: celery -A config worker --loglevel=info --concurrency=1
+    # Worker + Beat в одному процесі (free tier — один worker)
+    dockerCommand: celery -A config worker --beat --loglevel=info --concurrency=1
     envVars:
       - key: SECRET_KEY
         fromService:

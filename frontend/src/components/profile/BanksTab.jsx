@@ -165,31 +165,43 @@ const BanksTab = ({
                                 {bank.status === 'active' ? '● Активний' : '○ Неактивний'}
                             </span>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <button
-                                onClick={() => handleSyncBank(bank)}
-                                className="remove-button"
-                                title="Синхронізувати транзакції"
-                                disabled={syncingBankId === bank.id}
-                                style={{
-                                    background: syncingBankId === bank.id ? '#a0aec0' : '#48bb78',
-                                    color: '#fff', border: 'none',
-                                }}
-                            >
-                                {syncingBankId === bank.id ? '⏳' : '🔄'}
-                            </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <button
                                 onClick={() => handleRemoveBank(bank.id)}
                                 className="remove-button"
-                                title="Видалити"
+                                title="Видалити підключення та транзакції"
                             >
                                 🗑️
+                            </button>
+                            <button
+                                onClick={() => handleSyncBank(bank)}
+                                className="remove-button"
+                                title="Примусова синхронізація (транзакції оновлюються автоматично щогодини)"
+                                disabled={syncingBankId === bank.id}
+                                style={{
+                                    background: 'transparent',
+                                    color: syncingBankId === bank.id ? '#64748b' : '#475569',
+                                    border: '1px solid #334155',
+                                    fontSize: '13px',
+                                }}
+                            >
+                                {syncingBankId === bank.id ? '⏳' : '↻'}
                             </button>
                         </div>
                     </div>
                 ))}
             </div>
         </div>
+
+        {banks.length > 0 && (
+            <p style={{
+                marginTop: 16, textAlign: 'center',
+                fontSize: 12, color: '#475569',
+            }}>
+                🔄 Транзакції оновлюються автоматично щогодини. Кнопка ↻ — лише для примусового оновлення.
+            </p>
+        )}
+    </div>
     );
 };
 

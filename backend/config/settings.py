@@ -216,6 +216,27 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Europe/Kiev'
 CELERY_ENABLE_UTC = True
 
+# Celery Beat — автоматичний розклад синхронізації
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    # Monobank: щогодини в 0 хвилин
+    'sync-monobank-hourly': {
+        'task': 'finance.tasks.sync_all_monobank',
+        'schedule': crontab(minute=0),  # кожну годину
+    },
+    # Біржі: щогодини в 5 хвилин (щоб не перетинались з банком)
+    'sync-exchanges-hourly': {
+        'task': 'finance.tasks.sync_all_exchanges',
+        'schedule': crontab(minute=5),  # кожну годину о :05
+    },
+    # Очищення старих логів: раз на добу о 03:00
+    'cleanup-sync-logs-daily': {
+        'task': 'finance.tasks.cleanup_old_sync_logs',
+        'schedule': crontab(hour=3, minute=0),
+    },
+}
+
 # PUMB OAuth2 Configuration (optional)
 PUMB_CLIENT_ID = config('PUMB_CLIENT_ID', default='')
 PUMB_CLIENT_SECRET = config('PUMB_CLIENT_SECRET', default='')
