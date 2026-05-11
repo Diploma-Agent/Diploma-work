@@ -7,7 +7,8 @@ import hmac
 import hashlib
 import time
 from urllib.parse import urlencode
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
+from django.utils import timezone
 from finance.models import Transaction, TransactionCategory, SyncLog
 
 
@@ -259,7 +260,7 @@ class BinanceService:
                             description=f"{'Buy' if is_buyer else 'Sell'} {qty} {symbol.replace('USDT', '')} @ {price}",
                             category=category,
                             counterparty='Binance',
-                            transaction_date=datetime.fromtimestamp(trade.get('time', 0) / 1000)
+                            transaction_date=datetime.fromtimestamp(trade.get('time', 0) / 1000, tz=dt_timezone.utc)
                         )
                         
                         total_transactions += 1
@@ -269,14 +270,14 @@ class BinanceService:
                     continue
             
             # Update exchange connection
-            crypto_exchange.last_sync = datetime.now()
+            crypto_exchange.last_sync = timezone.now()
             crypto_exchange.status = 'active'
             crypto_exchange.save()
             
             # Update sync log
             sync_log.status = 'success'
             sync_log.transactions_count = total_transactions
-            sync_log.completed_at = datetime.now()
+            sync_log.completed_at = timezone.now()
             sync_log.save()
             
             return {
@@ -287,7 +288,7 @@ class BinanceService:
         except Exception as e:
             sync_log.status = 'failed'
             sync_log.error_message = str(e)
-            sync_log.completed_at = datetime.now()
+            sync_log.completed_at = timezone.now()
             sync_log.save()
             
             raise Exception(f"Sync failed: {str(e)}")

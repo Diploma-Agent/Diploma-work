@@ -7,7 +7,8 @@ import hmac
 import hashlib
 import base64
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
+from django.utils import timezone
 from finance.models import Transaction, TransactionCategory, SyncLog
 
 
@@ -169,20 +170,20 @@ class OKXService:
                     description=f"{side.upper()} {sz} {trade.get('instId', '')} @ {px}",
                     category=category,
                     counterparty='OKX',
-                    transaction_date=datetime.fromtimestamp(int(trade.get('ts', 0)) / 1000)
+                    transaction_date=datetime.fromtimestamp(int(trade.get('ts', 0)) / 1000, tz=dt_timezone.utc)
                 )
                 
                 total_transactions += 1
             
             # Update exchange connection
-            crypto_exchange.last_sync = datetime.now()
+            crypto_exchange.last_sync = timezone.now()
             crypto_exchange.status = 'active'
             crypto_exchange.save()
             
             # Update sync log
             sync_log.status = 'success'
             sync_log.transactions_count = total_transactions
-            sync_log.completed_at = datetime.now()
+            sync_log.completed_at = timezone.now()
             sync_log.save()
             
             return {
@@ -193,7 +194,7 @@ class OKXService:
         except Exception as e:
             sync_log.status = 'failed'
             sync_log.error_message = str(e)
-            sync_log.completed_at = datetime.now()
+            sync_log.completed_at = timezone.now()
             sync_log.save()
             
             raise Exception(f"Sync failed: {str(e)}")

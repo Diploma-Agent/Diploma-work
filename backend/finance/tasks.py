@@ -3,6 +3,7 @@ Celery Background Tasks
 """
 from celery import shared_task
 from datetime import datetime, timedelta
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from finance.models import BankConnection, CryptoExchange, SyncLog
@@ -138,7 +139,7 @@ def sync_user_connection(user_id, source, connection_id):
 @shared_task(name='finance.tasks.cleanup_old_sync_logs')
 def cleanup_old_sync_logs(days=30):
     """Видалення старих логів синхронізації"""
-    cutoff_date = datetime.now() - timedelta(days=days)
+    cutoff_date = timezone.now() - timedelta(days=days)
     
     deleted_count = SyncLog.objects.filter(
         created_at__lt=cutoff_date

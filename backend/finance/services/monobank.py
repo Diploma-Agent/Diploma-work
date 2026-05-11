@@ -165,10 +165,10 @@ class MonobankService:
             start_date = datetime.combine(date_from, datetime.min.time())
             end_date = datetime.combine(date_to, datetime.max.time())
             # Відсікаємо майбутнє
-            if end_date > datetime.now():
-                end_date = datetime.now()
+            if end_date > timezone.now():
+                end_date = timezone.now()
         else:
-            end_date = datetime.now()
+            end_date = timezone.now()
             start_date = end_date - timedelta(days=days)
         
         all_raw_transactions = []

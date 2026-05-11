@@ -3,7 +3,8 @@
 https://developer.pumb.ua/
 """
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
+from django.utils import timezone
 from django.conf import settings
 from finance.models import Transaction, TransactionCategory, SyncLog
 
@@ -111,7 +112,7 @@ class PUMBService:
             accounts = self.get_accounts()
             
             # Calculate date range
-            to_date = datetime.now()
+            to_date = timezone.now()
             from_date = to_date - timedelta(days=days)
             
             total_transactions = 0
@@ -152,20 +153,20 @@ class PUMBService:
                         description=trans.get('description', ''),
                         category=category,
                         counterparty=trans.get('merchant', ''),
-                        transaction_date=datetime.fromtimestamp(trans.get('timestamp', 0))
+                        transaction_date=datetime.fromtimestamp(trans.get('timestamp', 0), tz=dt_timezone.utc)
                     )
                     
                     total_transactions += 1
             
             # Update bank connection
-            bank_connection.last_sync = datetime.now()
+            bank_connection.last_sync = timezone.now()
             bank_connection.status = 'active'
             bank_connection.save()
             
             # Update sync log
             sync_log.status = 'success'
             sync_log.transactions_count = total_transactions
-            sync_log.completed_at = datetime.now()
+            sync_log.completed_at = timezone.now()
             sync_log.save()
             
             return {
@@ -176,7 +177,7 @@ class PUMBService:
         except Exception as e:
             sync_log.status = 'failed'
             sync_log.error_message = str(e)
-            sync_log.completed_at = datetime.now()
+            sync_log.completed_at = timezone.now()
             sync_log.save()
             
             raise Exception(f"Sync failed: {str(e)}")

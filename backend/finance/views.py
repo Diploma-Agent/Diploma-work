@@ -7,7 +7,8 @@ from drf_yasg import openapi
 import traceback
 import secrets
 import pytz
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone as dt_timezone
+from django.utils import timezone
 from django.conf import settings
 from pymongo import MongoClient
 import re
@@ -240,7 +241,7 @@ class TransactionListView(views.APIView):
         # 3. Якщо дат немає, працює дефолтна логіка (останні 30 днів)
         else:
             days = int(request.query_params.get('days', 30))
-            limit_date = datetime.now() - timedelta(days=days)
+            limit_date = timezone.now() - timedelta(days=days)
             queryset = queryset.filter(transaction_date__gte=limit_date)
         
         # 4. Фільтр по джерелу
@@ -1084,7 +1085,7 @@ class AIChatView(views.APIView):
                                 else:
                                     dt_naive = dt_naive.replace(month=dt_naive.month + 1, day=1) - timedelta(days=1)
                         except ValueError:
-                            dt_naive = datetime.now()
+                            dt_naive = timezone.now()
 
                     if is_end:
                         dt_naive = dt_naive.replace(hour=23, minute=59, second=59)
