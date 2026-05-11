@@ -39,11 +39,20 @@ PYEOF
 fi
 
 # ── Django startup ───────────────────────────────────────────────────────────
-echo "[entrypoint] Running migrations..."
-python manage.py migrate --noinput
+# Для Celery worker/beat — пропускаємо migrate та collectstatic:
+# вони вже виконались у web-сервісі, а worker не потребує статики.
+case "$1" in
+    celery)
+        echo "[entrypoint] Celery mode — skipping migrate & collectstatic"
+        ;;
+    *)
+        echo "[entrypoint] Running migrations..."
+        python manage.py migrate --noinput
 
-echo "[entrypoint] Collecting static files..."
-python manage.py collectstatic --noinput --clear
+        echo "[entrypoint] Collecting static files..."
+        python manage.py collectstatic --noinput --clear
+        ;;
+esac
 
 echo "[entrypoint] Starting: $*"
 exec "$@"
