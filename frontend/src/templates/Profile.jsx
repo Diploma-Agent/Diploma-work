@@ -31,6 +31,7 @@ function Profile() {
 	const [showAddBank, setShowAddBank] = useState(false);
 	const [bankForm, setBankForm] = useState({ name: '', type: 'monobank', apiKey: '' });
 	const [syncingBankId, setSyncingBankId] = useState(null);
+	const [addingBank, setAddingBank] = useState(false);
 	const navigate = useNavigate();
 
 	const fetchUserData = useCallback(async () => {
@@ -153,16 +154,20 @@ function Profile() {
 		}
 
 		try {
+			setAddingBank(true);
+			setError('');
 			const token = localStorage.getItem('token');
 			await financeService.addBank(token, bankForm);
-			
+
 			setBankForm({ name: '', type: 'monobank', apiKey: '' });
 			setShowAddBank(false);
-			setSuccess('Банк успішно додано!');
+			setSuccess('Банк успішно додано! Транзакції синхронізуються у фоні...');
 			loadBanks();
-			setTimeout(() => setSuccess(''), 3000);
+			setTimeout(() => setSuccess(''), 5000);
 		} catch (err) {
 			setError(err.message);
+		} finally {
+			setAddingBank(false);
 		}
 	};
 
@@ -321,6 +326,7 @@ function Profile() {
 									handleRemoveBank={handleRemoveBank}
 									handleSyncBank={handleSyncBank}
 									syncingBankId={syncingBankId}
+									addingBank={addingBank}
 								/>
 							)}
 							

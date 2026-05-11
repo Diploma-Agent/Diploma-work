@@ -255,6 +255,36 @@
 	background: #475569;
 }
 
+/* ── Анімація завантаження всередині кнопки ── */
+.btn-loading-inner {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+.btn-spinner {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	border: 2px solid rgba(255, 255, 255, 0.35);
+	border-top-color: #fff;
+	border-radius: 50%;
+	animation: btn-spin 0.7s linear infinite;
+	flex-shrink: 0;
+}
+
+@keyframes btn-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* Disabled стан кнопки при завантаженні */
+.profile-button:disabled {
+	opacity: 0.75;
+	cursor: not-allowed;
+	transform: none !important;
+}
+
 .profile-button--logout {
 	background: #fc8181;
 	color: white;

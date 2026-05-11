@@ -64,6 +64,7 @@ const BanksTab = ({
     handleRemoveBank,
     handleSyncBank,
     syncingBankId,
+    addingBank,
 }) => {
     const [showInstruction, setShowInstruction] = useState(false);
 
@@ -139,8 +140,18 @@ const BanksTab = ({
                         🔒 Токен зберігається у зашифрованому вигляді.
                     </small>
 
-                    <button type="submit" className="profile-button profile-button--save">
-                        Додати банк
+                    <button
+                        type="submit"
+                        className="profile-button profile-button--save"
+                        disabled={addingBank}
+                        style={{ position: 'relative', minWidth: 140 }}
+                    >
+                        {addingBank ? (
+                            <span className="btn-loading-inner">
+                                <span className="btn-spinner" />
+                                Перевірка токена...
+                            </span>
+                        ) : 'Додати банк'}
                     </button>
                 </form>
             )}
