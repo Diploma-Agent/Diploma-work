@@ -541,3 +541,17 @@
 	background: rgba(148, 163, 184, 0.1);
 	border-color: rgba(148, 163, 184, 0.2);
 }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  .transactions-page { padding-top: 70px; }
+  .transactions-container { padding: 16px 12px; }
+  .transactions-title { font-size: 24px; }
+  .transactions-filters { flex-direction: column; gap: 10px; padding: 16px; border-radius: 12px; }
+  .filter-group { width: 100%; }
+  .filter-input, .filter-select { width: 100%; box-sizing: border-box; font-size: 14px; }
+  .transaction-card { padding: 14px 12px; border-radius: 12px; gap: 12px; }
+  .transaction-description { font-size: 14px; }
+  .transaction-amount { font-size: 15px; }
+  .transaction-meta { flex-wrap: wrap; gap: 6px; font-size: 12px; }
+}

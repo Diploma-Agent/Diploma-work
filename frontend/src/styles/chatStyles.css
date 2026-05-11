@@ -348,3 +348,23 @@
         bottom: 12px;
     }
 }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 480px) {
+  .chat-window {
+    width: calc(100vw - 24px) !important;
+    height: 70vh !important;
+    bottom: 80px !important;
+    right: 12px !important;
+    left: 12px !important;
+    border-radius: 16px;
+  }
+  .chat-toggle-btn {
+    bottom: 20px !important;
+    right: 16px !important;
+    width: 54px !important;
+    height: 54px !important;
+    font-size: 22px !important;
+  }
+  .chat-input { font-size: 16px; } /* prevent zoom on iOS */
+}

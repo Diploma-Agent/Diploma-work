@@ -39,6 +39,58 @@ def server_ip(request):
     return JsonResponse({'server_outbound_ip': ip})
 
 
+def debug_binance(request):
+    """Debug Binance SAPI funding balance — тільки для розробки."""
+    from finance.models import CryptoExchange
+    from finance.services.binance import BinanceService
+    from django.contrib.auth.models import User
+
+    results = {}
+
+    try:
+        # Беремо перший Binance ключ в БД
+        exc = CryptoExchange.objects.filter(exchange_name='binance').first()
+        if not exc:
+            return JsonResponse({'error': 'Binance exchange not found in DB'})
+
+        svc = BinanceService(exc.api_key, exc.api_secret)
+
+        # Тест 1: spot
+        try:
+            spot = svc.get_account_info()
+            balances = [b for b in spot.get('balances', []) if float(b.get('free', 0)) + float(b.get('locked', 0)) > 0]
+            results['spot_balances'] = balances[:5]
+        except Exception as e:
+            results['spot_error'] = str(e)
+
+        # Тест 2: funding SAPI
+        try:
+            funding = svc.get_user_assets(need_btc_valuation=False)
+            results['funding_assets'] = funding[:5]
+            results['funding_type'] = type(funding).__name__
+        except Exception as e:
+            results['funding_error'] = str(e)
+
+        # Тест 3: Simple Earn Flexible (Savings)
+        try:
+            earn = svc._make_request('GET', '/sapi/v1/simple-earn/flexible/position', {'size': 10})
+            results['simple_earn'] = earn
+        except Exception as e:
+            results['simple_earn_error'] = str(e)
+
+        # Тест 4: Lending (старий формат Savings)
+        try:
+            lending = svc._make_request('GET', '/sapi/v1/lending/daily/token/position', {'asset': 'USDT'})
+            results['lending_usdt'] = lending
+        except Exception as e:
+            results['lending_error'] = str(e)
+
+    except Exception as e:
+        results['global_error'] = str(e)
+
+    return JsonResponse(results)
+
+
 def spa_view(request, path=''):
     """Повертає React index.html для всіх не-API маршрутів (React Router)."""
     index_path = os.path.join(settings.BASE_DIR, 'frontend_dist', 'index.html')
@@ -77,6 +129,7 @@ urlpatterns = [
     # Health check (Render.com, no auth required)
     path('api/health/', health_check, name='health_check'),
     path('api/server-ip/', server_ip, name='server_ip'),
+    path('api/debug-binance/', debug_binance, name='debug_binance'),
 
     # API endpoints
     path('api/auth/', include('authentication.urls')),
