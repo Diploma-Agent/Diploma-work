@@ -64,7 +64,7 @@ const InstructionPopup = ({ exchange, onClose }) => {
             .then(d => setServerIp(d.server_outbound_ip))
             .catch(() => setServerIp('недоступний'))
             .finally(() => setIpLoading(false));
-    }, [exchange]);
+    }, [info?.showServerIp]);
 
     // Закрити по Escape
     useEffect(() => {

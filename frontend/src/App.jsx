@@ -8,7 +8,7 @@ import Analytics from './templates/Analytics';
 import Transactions from './templates/Transactions';
 import CreateProfile from './templates/CreateProfile';
 import ChatComponent from './components/ChatComponent';
-import { FinanceProvider } from './context/FinanceContext';
+import { FinanceProvider } from './context/FinanceProvider';
 
 const AUTH_ROUTES = ['/login', '/register', '/create-profile'];
 
