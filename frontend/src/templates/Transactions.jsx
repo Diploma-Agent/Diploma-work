@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import CustomDatePicker from '../components/CustomDatePicker';
 import { useFinance } from '../context/FinanceContext';
 import { financeService } from '../api/financeService';
 import '../styles/transactionsStyles.css';
@@ -78,11 +79,23 @@ function Transactions() {
                 }
             }
 
+			let effectiveDateFrom = filters.dateFrom;
+            let effectiveDateTo = filters.dateTo;
+
+			if (effectiveDateFrom && !effectiveDateTo) {
+                const today = new Date();
+                effectiveDateTo = today.toISOString().split('T')[0];
+            }
+
+			else if (!effectiveDateFrom && effectiveDateTo) {
+                effectiveDateFrom = '2000-01-01'; 
+            }
+
 			const data = await getTransactions(
 				'all',
 				30,
-				filters.dateFrom,
-				filters.dateTo,
+				effectiveDateFrom,
+                effectiveDateTo,
 				targetIds,       // connection_ids
 				[]
 			);
@@ -226,26 +239,23 @@ function Transactions() {
 						</div>
 
 						<div className="filter-group">
-							<label className="filter-label">Дата від</label>
-							<input
-								type="date"
-								name="dateFrom"
-								value={filters.dateFrom}
-								onChange={handleFilterChange}
-								className="filter-input filter-date"
-							/>
-						</div>
+                            <label className="filter-label">Дата від</label>
+                            <CustomDatePicker
+                                value={filters.dateFrom}
+                                onChange={(val) => setFilters({ ...filters, dateFrom: val })}
+                                placeholder="дд.мм.рррр"
+                            />
+                        </div>
 
-						<div className="filter-group">
-							<label className="filter-label">Дата до</label>
-							<input
-								type="date"
-								name="dateTo"
-								value={filters.dateTo}
-								onChange={handleFilterChange}
-								className="filter-input filter-date"
-							/>
-						</div>
+                        <div className="filter-group">
+                            <label className="filter-label">Дата до</label>
+                            <CustomDatePicker
+                                value={filters.dateTo}
+                                onChange={(val) => setFilters({ ...filters, dateTo: val })}
+                                placeholder="дд.мм.рррр"
+                                minDate={filters.dateFrom}
+                            />
+                        </div>
 					</div>
 
 					<div className="transactions-list">

@@ -1,4 +1,5 @@
 import React from 'react';
+import CustomDatePicker from '../CustomDatePicker';
 
 const ProfileTab = ({ 
     user, 
@@ -63,12 +64,12 @@ const ProfileTab = ({
 
                     <label className="profile-label">
                         <span>Дата народження</span>
-                        <input
-                            className="profile-input"
-                            name="dateOfBirth"
-                            type="date"
+                        <CustomDatePicker
                             value={form.dateOfBirth}
-                            onChange={onChange}
+                            placeholder="дд.мм.рррр"
+                            onChange={(val) => {
+                                onChange({ target: { name: 'dateOfBirth', value: val } });
+                            }}
                         />
                     </label>
 
