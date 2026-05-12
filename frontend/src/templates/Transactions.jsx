@@ -16,6 +16,7 @@ function Transactions() {
 	const [filteredTransactions, setFilteredTransactions] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
+	const todayStr = new Date().toISOString().split('T')[0];
 
 	// Список акаунтів для фільтра
 	const [accounts, setAccounts] = useState([]);
@@ -244,6 +245,7 @@ function Transactions() {
                                 value={filters.dateFrom}
                                 onChange={(val) => setFilters({ ...filters, dateFrom: val })}
                                 placeholder="дд.мм.рррр"
+								maxDate={todayStr}
                             />
                         </div>
 
@@ -254,6 +256,7 @@ function Transactions() {
                                 onChange={(val) => setFilters({ ...filters, dateTo: val })}
                                 placeholder="дд.мм.рррр"
                                 minDate={filters.dateFrom}
+								maxDate={todayStr}
                             />
                         </div>
 					</div>
