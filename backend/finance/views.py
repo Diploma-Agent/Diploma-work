@@ -12,6 +12,22 @@ from django.utils import timezone
 from django.conf import settings
 from pymongo import MongoClient
 import re
+import threading
+from django.db import connections
+
+def run_in_background(task_func, *args, **kwargs):
+    def wrapper():
+        try:
+            task_func(*args, **kwargs)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"Error in background task {task_func.__name__}: {e}")
+        finally:
+            # Закриваємо з'єднання БД для поточного треду
+            connections.close_all()
+            
+    threading.Thread(target=wrapper, daemon=True).start()
 
 from .models import (
     BankConnection, CryptoExchange, Transaction,
@@ -67,14 +83,53 @@ class AddBankConnectionView(views.APIView):
         bank_name = serializer.validated_data['bank_name']
         access_token = serializer.validated_data['access_token']
 
+        # Перевірка, чи не зайнято ім'я токену
+        if BankConnection.objects.filter(user=request.user, name=name).exists():
+            return Response(
+                {'error': 'Ім\'я токену вже зайнято. Виберіть інше.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Перевірка, чи не додано вже саме ЦЕЙ токен
+        # Ми не можемо просто фільтрувати по access_token напряму через ORM, 
+        # бо він EncryptedField (залежить від налаштувань). 
+        # Перевіримо вручну серед з'єднань користувача:
+        existing_connections = BankConnection.objects.filter(user=request.user, bank_name=bank_name)
+        for conn in existing_connections:
+            if conn.access_token == access_token:
+                return Response(
+                    {'error': 'Даний токен банківського рахунку вже додано!'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        client_id = None
         # Перевіряємо токен
         if bank_name == 'monobank':
-            if not MonobankService.validate_token(access_token):
+            from finance.services.monobank import MonobankService
+            client_info = None
+            try:
+                client_info = MonobankService.get_client_info(access_token)
+            except Exception:
+                pass
+                
+            if not client_info:
                 return Response(
                     {'error': 'Невалідний токен Monobank'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            
+            client_id = client_info.get('clientId')
+            
+            if client_id:
+                for conn in existing_connections:
+                    if conn.account_name == client_id:
+                        return Response(
+                            {'error': f'Ви намагаєтесь додати оновлений токен для рахунку, який вже існує (ідентифікатор: {client_id}). Будь ласка, спочатку видаліть старе підключення.'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
         elif bank_name == 'pumb':
+            from finance.services.pumb import PUMBService
             if not PUMBService.validate_token(access_token):
                 return Response(
                     {'error': 'Невалідний токен ПУМБ'},
@@ -87,13 +142,32 @@ class AddBankConnectionView(views.APIView):
             bank_name=bank_name,
             name=name or bank_name.capitalize(),
             access_token=access_token,
+            account_name=client_id, # зберігаємо client_id як account_name
             status='active'
         )
 
-        # Запускаємо початкову синхронізацію у фоні через Celery
+        from django.utils import timezone
+        import datetime
+        from dateutil.relativedelta import relativedelta
+
+        # Запускаємо фонову синхронізацію для минулих місяців (2 попередні місяці)
         try:
-            sync_user_connection.delay(request.user.id, bank_name, bank_connection.id)
-        except Exception:
+            today = timezone.now().date()
+            first_day_of_current = today.replace(day=1)
+            # Мінус 2 місяці
+            first_day_of_past = first_day_of_current - relativedelta(months=2)
+            last_day_of_past = first_day_of_current - datetime.timedelta(days=1)
+            
+            run_in_background(
+                sync_user_connection,
+                request.user.id, 
+                bank_name, 
+                bank_connection.id,
+                date_from=first_day_of_past.isoformat(),
+                date_to=last_day_of_past.isoformat()
+            )
+        except Exception as e:
+            print(f"Celery start error: {e}")
             pass  # Celery може бути недоступний — не блокуємо відповідь
 
         return Response(
@@ -115,13 +189,14 @@ class DeleteBankConnectionView(views.APIView):
     def delete(self, request, pk):
         try:
             connection = BankConnection.objects.get(pk=pk, user=request.user)
-            # Видаляємо тільки транзакції цього конкретного підключення
-            deleted_count, _ = Transaction.objects.filter(
-                user=request.user, connection_id=connection.id
-            ).delete()
+            # Запускаємо фонове видалення транзакцій, щоб не блокувати запит
+            from finance.tasks import delete_transactions_background
+            run_in_background(delete_transactions_background, request.user.id, connection.bank_name, connection.id)
+            
+            # Видаляємо саме підключення (видалиться швидко)
             connection.delete()
             return Response(
-                {'deleted_transactions': deleted_count},
+                {'message': 'Синхронізацію припинено, транзакції видаляються у фоні'},
                 status=status.HTTP_204_NO_CONTENT
             )
         except BankConnection.DoesNotExist:
@@ -191,11 +266,11 @@ class AddCryptoExchangeView(views.APIView):
         )
         created = True
 
-        # Запускаємо початкову синхронізацію у фоні через Celery
+        # Запускаємо початкову синхронізацію у фоні
         try:
-            sync_user_connection.delay(request.user.id, exchange_name, exchange.id)
+            run_in_background(sync_user_connection, request.user.id, exchange_name, exchange.id)
         except Exception:
-            pass  # Celery може бути недоступний — не блокуємо відповідь
+            pass  # Фоновий потік може не запуститися — не блокуємо відповідь
 
         return Response(
             CryptoExchangeSerializer(exchange).data,
@@ -216,13 +291,13 @@ class DeleteCryptoExchangeView(views.APIView):
     def delete(self, request, pk):
         try:
             exchange = CryptoExchange.objects.get(pk=pk, user=request.user)
-            # Видаляємо тільки транзакції цього конкретного підключення
-            deleted_count, _ = Transaction.objects.filter(
-                user=request.user, connection_id=exchange.id
-            ).delete()
+            # Запускаємо фонове видалення транзакцій, щоб не блокувати запит
+            from finance.tasks import delete_transactions_background
+            run_in_background(delete_transactions_background, request.user.id, exchange.exchange_name, exchange.id)
+            
             exchange.delete()
             return Response(
-                {'deleted_transactions': deleted_count},
+                {'message': 'Синхронізацію припинено, транзакції видаляються у фоні'},
                 status=status.HTTP_204_NO_CONTENT
             )
         except CryptoExchange.DoesNotExist:
@@ -247,12 +322,31 @@ class TransactionListView(views.APIView):
         # 1. Починаємо з усіх транзакцій користувача
         queryset = Transaction.objects.filter(user=request.user)
 
+        # Відсіюємо транзакції видалених підключень (вони видаляються у фоні)
+        from django.db.models import Q
+        active_bank_ids = list(BankConnection.objects.filter(user=request.user).values_list('id', flat=True))
+        active_crypto_ids = list(CryptoExchange.objects.filter(user=request.user).values_list('id', flat=True))
+        
+        queryset = queryset.filter(
+            Q(source__in=['monobank', 'pumb'], connection_id__in=active_bank_ids) |
+            Q(source__in=['binance', 'bybit', 'okx'], connection_id__in=active_crypto_ids) |
+            Q(source='manual')
+        )
+
         # 2. Якщо клієнт передав дати, фільтруємо по них
         if date_from and date_to:
-            queryset = queryset.filter(
-                transaction_date__gte=date_from,
-                transaction_date__lte=f"{date_to}T23:59:59"
-            )
+            try:
+                dt_from = timezone.make_aware(datetime.strptime(date_from, "%Y-%m-%d"))
+                dt_to = timezone.make_aware(datetime.strptime(f"{date_to} 23:59:59", "%Y-%m-%d %H:%M:%S"))
+                queryset = queryset.filter(
+                    transaction_date__gte=dt_from,
+                    transaction_date__lte=dt_to
+                )
+            except ValueError:
+                queryset = queryset.filter(
+                    transaction_date__gte=date_from,
+                    transaction_date__lte=f"{date_to}T23:59:59"
+                )
         else:
             days = int(request.query_params.get('days', 30))
             limit_date = timezone.now() - timedelta(days=days)
@@ -298,7 +392,7 @@ class UserAccountsView(views.APIView):
         for e in exchanges:
             accounts.append({
                 'id': e.id,
-                'name': e.name or e.exchange_name.capitalize(),
+                'name': e.exchange_name.capitalize(),
                 'source': e.exchange_name,
                 'type': 'exchange',
                 'status': e.status,
@@ -1054,10 +1148,12 @@ class AIChatView(views.APIView):
 
                 # БЕРЕМО ДАНІ ВИКЛЮЧНО З ЛОКАЛЬНОЇ БАЗИ MongoDB
                 # Фільтруємо тільки UAH-транзакції (банк), щоб не змішувати з крипто
+                active_bank_ids_chat = list(BankConnection.objects.filter(user=request.user).values_list('id', flat=True))
                 local_txs = Transaction.objects.filter(
                     user=request.user,
                     transaction_date__gte=thirty_days_ago,
-                    currency='UAH'
+                    currency='UAH',
+                    connection_id__in=active_bank_ids_chat
                 ).exclude(type='transfer').order_by('-transaction_date')
 
                 # Баг 1 fix: підсумок і список тепер охоплюють однаковий період (30 днів)

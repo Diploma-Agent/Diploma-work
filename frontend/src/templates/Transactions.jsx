@@ -7,9 +7,6 @@ import '../styles/transactionsStyles.css';
 
 const SOURCE_ICONS = {
 	monobank: '🏦',
-	binance:  '₿',
-	bybit:    '📊',
-	okx:      '🔷',
 	manual:   '✍️',
 };
 
@@ -38,32 +35,68 @@ function Transactions() {
 	useEffect(() => {
 		const token = localStorage.getItem('token');
 		if (!token) return;
+
 		financeService.getAccounts(token)
-			.then(data => setAccounts(data || []))
+			.then(data => {
+				if (!data) {
+					setAccounts([]);
+					return;
+				}
+
+				// Залишаємо тільки ті акаунти, які НЕ є біржами
+				const allowedSources = ['monobank', 'manual'];
+				const filteredAccounts = data.filter(acc => allowedSources.includes(acc.source));
+				
+				setAccounts(filteredAccounts);
+			})
 			.catch(() => setAccounts([]));
 	}, []);
 
-	const fetchTransactions = useCallback(async () => {
+		const fetchTransactions = useCallback(async () => {
 		try {
 			const token = localStorage.getItem('token');
 			if (!token) { navigate('/login'); return; }
+
+			// Якщо ще немає підключених акаунтів, не робимо запит
+			if (accounts.length === 0) {
+				setTransactions([]);
+				setFilteredTransactions([]);
+				setLoading(false);
+				return;
+			}
+
+			let targetIds = selectedIds;
+
+			if (selectedIds.length === 0) {
+                if (accounts.length > 0) {
+                    // Передаємо ID всіх видимих у фільтрі акаунтів
+                    targetIds = accounts.map(acc => acc.id);
+                } else {
+                    // Якщо список акаунтів ще не завантажився, передаємо undefined
+                    // (багато API розуміють undefined як "повернути все")
+                    targetIds = undefined;
+                }
+            }
 
 			const data = await getTransactions(
 				'all',
 				30,
 				filters.dateFrom,
 				filters.dateTo,
-				selectedIds,       // connection_ids
+				targetIds,       // connection_ids
 				[]
 			);
+
 			setTransactions(data);
 			setFilteredTransactions(data);
 		} catch (err) {
-			setError(err.message || 'Помилка завантаження транзакцій');
+			if (accounts.length > 0) {
+				setError(err.message || 'Помилка завантаження транзакцій');
+			}
 		} finally {
 			setLoading(false);
 		}
-	}, [navigate, getTransactions, filters.dateFrom, filters.dateTo, selectedIds]);
+	}, [navigate, getTransactions, filters.dateFrom, filters.dateTo, selectedIds, accounts]);
 
 	const applyFilters = useCallback(() => {
 		let filtered = [...transactions];
@@ -141,7 +174,7 @@ function Transactions() {
 
 					<div className="transactions-filters">
 						{/* ── Фільтр по акаунтах (chips) ── */}
-						{accounts.length > 0 && (
+						{accounts.length > 1 && (
 							<div className="filter-group filter-group--full">
 								<label className="filter-label">Акаунт</label>
 								<div className="account-chips">

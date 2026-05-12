@@ -32,6 +32,8 @@ function Profile() {
 	const [bankForm, setBankForm] = useState({ name: '', type: 'monobank', apiKey: '' });
 	const [syncingBankId, setSyncingBankId] = useState(null);
 	const [addingBank, setAddingBank] = useState(false);
+	const [addingBankProgress, setAddingBankProgress] = useState(null); // 'validating' (перевірка токену та додавання) -> 'syncing' (завантаження транзакцій у фоні)
+	const [removingBankId, setRemovingBankId] = useState(null);
 	const navigate = useNavigate();
 
 	const fetchUserData = useCallback(async () => {
@@ -155,31 +157,66 @@ function Profile() {
 
 		try {
 			setAddingBank(true);
+			setAddingBankProgress('validating_token');
 			setError('');
 			const token = localStorage.getItem('token');
+
+			// 1. Спочатку робимо запит до нашого бекенду для валідації та збереження
 			await financeService.addBank(token, bankForm);
 
+			setAddingBankProgress('saving');
+			setTimeout(() => setAddingBankProgress('syncing'), 600); // small delay for UI smoothness
+			// 2. Синхронізуємо транзакції за поточний місяць
+			const today = new Date();
+			
+			// Форматуємо дати безпечно з урахуванням локальної зони (YYYY-MM-DD)
+			const getLocalDateString = (date) => {
+				const y = date.getFullYear();
+				const m = String(date.getMonth() + 1).padStart(2, '0');
+				const d = String(date.getDate()).padStart(2, '0');
+				return `${y}-${m}-${d}`;
+			};
+
+			const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+			const dateFrom = getLocalDateString(firstDayOfMonth);
+			const dateTo = getLocalDateString(today);
+
+			await financeService.syncTransactions(token, bankForm.type, null, dateFrom, dateTo);
+
+			setAddingBankProgress('redirecting');
+			setSuccess('Банк успішно додано!');
 			setBankForm({ name: '', type: 'monobank', apiKey: '' });
 			setShowAddBank(false);
-			setSuccess('Банк успішно додано! Транзакції синхронізуються у фоні...');
-			loadBanks();
-			setTimeout(() => setSuccess(''), 5000);
+
+			// 3. Завершуємо додавання банку
+			setTimeout(() => {
+				setAddingBankProgress(null);
+				setAddingBank(false);
+				loadBanks();
+			}, 1000);
+			
 		} catch (err) {
 			setError(err.message);
-		} finally {
+			setAddingBankProgress(null);
 			setAddingBank(false);
 		}
 	};
 
 	const handleRemoveBank = async (id) => {
 		try {
+			setRemovingBankId(id);
 			const token = localStorage.getItem('token');
 			await financeService.deleteBank(token, id);
+			// Миттєво видаляємо банк з локального списку для швидкого відображення
+			setBanks(prev => prev.filter(b => b.id !== id));
 			setSuccess('Банк видалено!');
+			// Все одно викликаємо loadBanks для гарантованої синхронізації з сервером
 			loadBanks();
 			setTimeout(() => setSuccess(''), 3000);
 		} catch (err) {
 			setError(err.message);
+		} finally {
+			setRemovingBankId(null);
 		}
 	};
 
@@ -188,7 +225,7 @@ function Profile() {
 			setSyncingBankId(bank.id);
 			setError('');
 			const token = localStorage.getItem('token');
-			const result = await financeService.syncTransactions(token, bank.bank_name, 365);
+			const result = await financeService.syncTransactions(token, bank.bank_name, 30);
 			setSuccess(`Синхронізовано: +${result.transactions_added} нових, оновлено ${result.transactions_updated}`);
 			setTimeout(() => setSuccess(''), 5000);
 		} catch (err) {
@@ -327,6 +364,8 @@ function Profile() {
 									handleSyncBank={handleSyncBank}
 									syncingBankId={syncingBankId}
 									addingBank={addingBank}
+									addingBankProgress={addingBankProgress}
+									removingBankId={removingBankId}
 								/>
 							)}
 							

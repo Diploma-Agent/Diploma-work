@@ -164,9 +164,8 @@ class MonobankService:
         
         # Логіка визначення стартової та кінцевої дати
         if date_from and date_to:
-            # datetime.min.time() = 00:00:00, datetime.max.time() = 23:59:59
-            start_date = datetime.combine(date_from, datetime.min.time())
-            end_date = datetime.combine(date_to, datetime.max.time())
+            start_date = timezone.make_aware(datetime.combine(date_from, datetime.min.time()))
+            end_date = timezone.make_aware(datetime.combine(date_to, datetime.max.time()))
             # Відсікаємо майбутнє
             if end_date > timezone.now():
                 end_date = timezone.now()

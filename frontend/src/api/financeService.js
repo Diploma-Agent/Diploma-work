@@ -48,14 +48,19 @@ export const financeService = {
 		if (!response.ok) throw new Error('Помилка видалення банку');
 	},
 
-	async syncTransactions(token, source, days = 365) {
+	async syncTransactions(token, source, days = null, dateFrom = null, dateTo = null) {
+		const body = { source };
+		if (days) body.days = days;
+		if (dateFrom) body.date_from = dateFrom;
+		if (dateTo) body.date_to = dateTo;
+
 		const response = await fetch(`${API_URL}/transactions/sync/`, {
 			method: 'POST',
 			headers: {
 				'Authorization': `Bearer ${token}`,
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify({ source, days }),
+			body: JSON.stringify(body),
 		});
 
 		if (!response.ok) {

@@ -65,6 +65,8 @@ const BanksTab = ({
     handleSyncBank,
     syncingBankId,
     addingBank,
+    addingBankProgress, // новий пропс для прогресу
+    removingBankId,
 }) => {
     const [showInstruction, setShowInstruction] = useState(false);
 
@@ -144,15 +146,34 @@ const BanksTab = ({
                         type="submit"
                         className="profile-button profile-button--save"
                         disabled={addingBank}
-                        style={{ position: 'relative', minWidth: 140 }}
+                        style={{ position: 'relative', minWidth: 200 }}
                     >
                         {addingBank ? (
                             <span className="btn-loading-inner">
                                 <span className="btn-spinner" />
-                                Перевірка токена...
+                                {addingBankProgress === 'validating_token' ? 'Перевірка токена...' : 
+                                 addingBankProgress === 'saving' ? 'Збереження...' :
+                                 addingBankProgress === 'syncing' ? 'Синхронізація (≈10с)...' :
+                                 addingBankProgress === 'redirecting' ? 'Готово!' : 'Завантаження...'}
                             </span>
                         ) : 'Додати банк'}
                     </button>
+                    {addingBank && (
+                        <div style={{ marginTop: '10px', fontSize: '13px', color: '#94a3b8', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', border: '1px solid #334155' }}>
+                            <div style={{ color: '#cbd5e1', marginBottom: '5px' }}><strong>Етапи додавання токена:</strong></div>
+                            <ul style={{ margin: '0 0 0 20px', padding: 0 }}>
+                                <li style={{ color: addingBankProgress === 'validating_token' ? '#38bdf8' : '#22c55e' }}>
+                                    {addingBankProgress === 'validating_token' ? '⏳ Перевірка валідності токена...' : '✅ Токен валідний'}
+                                </li>
+                                <li style={{ color: ['validating_token'].includes(addingBankProgress) ? '#475569' : addingBankProgress === 'saving' ? '#38bdf8' : '#22c55e', marginTop: '4px' }}>
+                                    {['validating_token'].includes(addingBankProgress) ? 'Очікування збереження' : addingBankProgress === 'saving' ? '⏳ Збереження підключення...' : '✅ Підключення збережено'}
+                                </li>
+                                <li style={{ color: ['validating_token', 'saving'].includes(addingBankProgress) ? '#475569' : addingBankProgress === 'syncing' ? '#38bdf8' : '#22c55e', marginTop: '4px' }}>
+                                    {['validating_token', 'saving'].includes(addingBankProgress) ? 'Очікування отримання виписок' : addingBankProgress === 'syncing' ? '⏳ Отримання виписок за поточний місяць...' : '✅ Транзакції синхронізовано'}
+                                </li>
+                            </ul>
+                        </div>
+                    )}
                 </form>
             )}
 
@@ -181,8 +202,10 @@ const BanksTab = ({
                                 onClick={() => handleRemoveBank(bank.id)}
                                 className="remove-button"
                                 title="Видалити підключення та транзакції"
+                                disabled={removingBankId === bank.id}
+                                style={{ opacity: removingBankId === bank.id ? 0.5 : 1, width: removingBankId === bank.id ? 'auto' : undefined, fontSize: removingBankId === bank.id ? '12px' : undefined }}
                             >
-                                🗑️
+                                {removingBankId === bank.id ? '⏳ Видалення...' : '🗑️'}
                             </button>
                             <button
                                 onClick={() => handleSyncBank(bank)}

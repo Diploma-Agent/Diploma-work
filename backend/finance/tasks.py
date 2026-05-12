@@ -58,18 +58,24 @@ def sync_all_exchanges():
 
 # ── Перший імпорт після додавання (90 днів = 3 місяці) ─────────────────────
 @shared_task(name='finance.tasks.sync_user_connection')
-def sync_user_connection(user_id, source, connection_id, days=90):
+def sync_user_connection(user_id, source, connection_id, days=None, date_from=None, date_to=None):
     """Синхронізація конкретного підключення.
     При першому додаванні — 90 днів (3 місяці).
-    При ручному sync — може передаватись інший days.
+    При ручному sync — може передаватись інший days або date_from/date_to.
     """
     try:
         user = User.objects.get(id=user_id)
 
+        # Конвертуємо рядки в date, якщо вони прийшли від Celery у вигляді рядків
+        if isinstance(date_from, str):
+            date_from = datetime.fromisoformat(date_from).date()
+        if isinstance(date_to, str):
+            date_to = datetime.fromisoformat(date_to).date()
+
         if source == 'monobank':
             connection = BankConnection.objects.get(id=connection_id, user=user)
             service = MonobankService(user)
-            return service.sync_transactions(connection, days=days)
+            return service.sync_transactions(connection, days=days, date_from=date_from, date_to=date_to)
 
         elif source in ['binance', 'bybit', 'okx']:
             exchange = CryptoExchange.objects.get(id=connection_id, user=user)
@@ -99,3 +105,18 @@ def cleanup_old_sync_logs(days=60):
     cutoff_date = timezone.now() - timedelta(days=days)
     deleted_count, _ = SyncLog.objects.filter(started_at__lt=cutoff_date).delete()
     return {'deleted': deleted_count}
+
+
+@shared_task(name='finance.tasks.delete_transactions_background')
+def delete_transactions_background(user_id, source, connection_id):
+    """Видаляє транзакції у фоні, щоб не блокувати UI користувачу"""
+    from finance.models import Transaction
+    
+    # Видаляємо всі транзакції для цього підключення (банку чи біржі)
+    deleted_count, _ = Transaction.objects.filter(
+        user_id=user_id, 
+        source=source, 
+        connection_id=connection_id
+    ).delete()
+    
+    return {'deleted_transactions': deleted_count}
