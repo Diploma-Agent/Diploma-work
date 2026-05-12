@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { authService } from '../api/authService';
+import { financeService } from '../api/financeService';
 import { useFinance } from '../context/FinanceContext';
 import '../styles/dashboardStyles.css';
+
+const SOURCE_ICONS = {
+	monobank: '🏦',
+	binance:  '₿',
+	bybit:    '📊',
+	okx:      '🔷',
+	manual:   '✍️',
+};
 
 function calcMonthStats(txList) {
 	const now = new Date();
@@ -25,12 +34,39 @@ function calcMonthStats(txList) {
 function Dashboard() {
 	const navigate = useNavigate();
 	const { getBalance, getTransactions } = useFinance();
-	const [userName, setUserName] = useState('');
-	const [balance, setBalance] = useState(null);
-	const [stats, setStats] = useState(null);
+
+	const [userName, setUserName]         = useState('');
+	const [balance, setBalance]           = useState(null);
+	const [stats, setStats]               = useState(null);
 	const [transactions, setTransactions] = useState([]);
 	const [loadingBalance, setLoadingBalance] = useState(true);
-	const [loadingTx, setLoadingTx] = useState(true);
+	const [loadingTx, setLoadingTx]       = useState(true);
+
+	// Фільтр по акаунтах
+	const [accounts, setAccounts]         = useState([]);
+	const [selectedIds, setSelectedIds]   = useState([]); // [] = всі
+
+	// Завантажуємо акаунти один раз
+	useEffect(() => {
+		const token = localStorage.getItem('token');
+		if (!token) return;
+		financeService.getAccounts(token)
+			.then(data => setAccounts(data || []))
+			.catch(() => {});
+	}, []);
+
+	// Завантажуємо транзакції при зміні вибраних акаунтів
+	const loadTransactions = useCallback(() => {
+		setLoadingTx(true);
+		getTransactions('all', 31, '', '', selectedIds, [])
+			.then(res => {
+				const list = Array.isArray(res) ? res : (Array.isArray(res?.transactions) ? res.transactions : []);
+				setStats(calcMonthStats(list));
+				setTransactions(list.slice(0, 5));
+			})
+			.catch(() => setStats({ income: 0, expense: 0 }))
+			.finally(() => setLoadingTx(false));
+	}, [getTransactions, selectedIds]);
 
 	useEffect(() => {
 		const token = localStorage.getItem('token');
@@ -43,26 +79,19 @@ function Dashboard() {
 			.then(u => setUserName(u.first_name || u.username || 'Користувачу'))
 			.catch(() => {});
 
-		// Баланс — з кешу або API
+		// Баланс
 		getBalance()
-			.then(res => {
-				if (res) setBalance(res.balance ?? res.total_balance ?? 0);
-			})
+			.then(res => { if (res) setBalance(res.balance ?? res.total_balance ?? 0); })
 			.catch(() => setBalance(0))
 			.finally(() => setLoadingBalance(false));
+	}, [navigate, getBalance]);
 
-		// Транзакції + статистика — з кешу або API
-		getTransactions('all', 31)
-			.then(res => {
-				const list = Array.isArray(res) ? res : (Array.isArray(res?.transactions) ? res.transactions : []);
-				setStats(calcMonthStats(list));
-				setTransactions(list.slice(0, 5));
-			})
-			.catch(() => setStats({ income: 0, expense: 0 }))
-			.finally(() => setLoadingTx(false));
-	}, [navigate, getBalance, getTransactions]);
+	useEffect(() => { loadTransactions(); }, [loadTransactions]);
 
 	const fmt = (n) => (Number(n) || 0).toLocaleString('uk-UA');
+
+	const toggleAccount = (id) =>
+		setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
 	return (
 		<div className="dashboard-wrapper">
@@ -76,10 +105,35 @@ function Dashboard() {
 						<p className="dashboard-subtitle">Ось ваш фінансовий зріз на сьогодні</p>
 					</div>
 
+					{/* ── Фільтр по акаунтах ── */}
+					{accounts.length > 0 && (
+						<div className="dashboard-account-filter">
+							<button
+								className={`dash-chip ${selectedIds.length === 0 ? 'dash-chip--active' : ''}`}
+								onClick={() => setSelectedIds([])}
+							>
+								Всі
+							</button>
+							{accounts.map(acc => (
+								<button
+									key={acc.id}
+									className={`dash-chip ${selectedIds.includes(acc.id) ? 'dash-chip--active' : ''}`}
+									onClick={() => toggleAccount(acc.id)}
+								>
+									{SOURCE_ICONS[acc.source] || '💼'} {acc.name}
+								</button>
+							))}
+						</div>
+					)}
+
 					{/* Баланс + статистика */}
 					<div className="dashboard-summary-section">
 						<div className="dashboard-total-card">
-							<h2>Загальний баланс</h2>
+							<h2>
+								{selectedIds.length > 0
+									? accounts.filter(a => selectedIds.includes(a.id)).map(a => a.name).join(' + ')
+									: 'Загальний баланс'}
+							</h2>
 							<div className="balance-info">
 								{loadingBalance
 									? <p className="loading-inline">Завантаження...</p>
@@ -124,7 +178,7 @@ function Dashboard() {
 								{loadingTx && <p>Завантаження...</p>}
 								{!loadingTx && transactions.length === 0 && (
 									<p className="no-data-text">
-										Транзакції відсутні. Підключіть банк у <Link to="/profile">налаштуваннях</Link>.
+										Транзакції відсутні. {selectedIds.length > 0 ? 'Спробуйте вибрати інший акаунт.' : <>Підключіть банк у <Link to="/profile">налаштуваннях</Link>.</>}
 									</p>
 								)}
 								{!loadingTx && transactions.map((tx, idx) => {
