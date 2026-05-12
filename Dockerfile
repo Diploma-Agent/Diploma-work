@@ -16,7 +16,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ── Збірка React фронтенду ─────────────────────────────────────────────────────
 # VITE_API_BASE_URL не вказуємо — фронтенд використовує відносні шляхи /api/...
 COPY frontend/ /tmp/frontend/
-RUN cd /tmp/frontend && npm install --legacy-peer-deps && npm run build
+RUN cd /tmp/frontend \
+    && rm -f package-lock.json \
+    && npm install --legacy-peer-deps \
+    && NODE_OPTIONS="--max-old-space-size=1024" npm run build
 
 # ── Код бекенду ───────────────────────────────────────────────────────────────
 COPY backend/ .
