@@ -4,6 +4,7 @@ import '../styles/profileStyles.css';
 import { authService } from '../api/authService';
 import Navbar from '../components/Navbar';
 import { financeService } from '../api/financeService';
+import { useFinance } from '../context/FinanceContext';
 
 // Import sub-components
 import ProfileTab from '../components/profile/ProfileTab';
@@ -26,15 +27,16 @@ function Profile() {
 	const [error, setError] = useState('');
 	const [success, setSuccess] = useState('');
 	const [loading, setLoading] = useState(false);
-	const [activeTab, setActiveTab] = useState('profile'); // profile, banks, tokens
+	const [activeTab, setActiveTab] = useState('profile');
 	const [banks, setBanks] = useState([]);
 	const [showAddBank, setShowAddBank] = useState(false);
 	const [bankForm, setBankForm] = useState({ name: '', type: 'monobank', apiKey: '' });
 	const [syncingBankId, setSyncingBankId] = useState(null);
 	const [addingBank, setAddingBank] = useState(false);
-	const [addingBankProgress, setAddingBankProgress] = useState(null); // 'validating' (перевірка токену та додавання) -> 'syncing' (завантаження транзакцій у фоні)
+	const [addingBankProgress, setAddingBankProgress] = useState(null);
 	const [removingBankId, setRemovingBankId] = useState(null);
 	const navigate = useNavigate();
+	const { invalidate } = useFinance();
 
 	const fetchUserData = useCallback(async () => {
 		try {
@@ -191,6 +193,8 @@ function Profile() {
                 newBank.id 
             );
 
+			invalidate();
+
 			setAddingBankProgress('redirecting');
 			setSuccess('Банк успішно додано!');
 			setBankForm({ name: '', type: 'monobank', apiKey: '' });
@@ -215,10 +219,12 @@ function Profile() {
 			setRemovingBankId(id);
 			const token = localStorage.getItem('token');
 			await financeService.deleteBank(token, id);
-			// Миттєво видаляємо банк з локального списку для швидкого відображення
+
+			invalidate();
+
 			setBanks(prev => prev.filter(b => b.id !== id));
 			setSuccess('Банк видалено!');
-			// Все одно викликаємо loadBanks для гарантованої синхронізації з сервером
+
 			loadBanks();
 			setTimeout(() => setSuccess(''), 3000);
 		} catch (err) {
