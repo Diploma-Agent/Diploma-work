@@ -162,10 +162,11 @@ function Profile() {
 			const token = localStorage.getItem('token');
 
 			// 1. Спочатку робимо запит до нашого бекенду для валідації та збереження
-			await financeService.addBank(token, bankForm);
+			const newBank = await financeService.addBank(token, bankForm);
 
 			setAddingBankProgress('saving');
 			setTimeout(() => setAddingBankProgress('syncing'), 600); // small delay for UI smoothness
+			
 			// 2. Синхронізуємо транзакції за поточний місяць
 			const today = new Date();
 			
@@ -181,7 +182,14 @@ function Profile() {
 			const dateFrom = getLocalDateString(firstDayOfMonth);
 			const dateTo = getLocalDateString(today);
 
-			await financeService.syncTransactions(token, bankForm.type, null, dateFrom, dateTo);
+			await financeService.syncTransactions(
+                token, 
+                bankForm.type, 
+                null, 
+                dateFrom, 
+                dateTo, 
+                newBank.id 
+            );
 
 			setAddingBankProgress('redirecting');
 			setSuccess('Банк успішно додано!');
