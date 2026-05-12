@@ -426,54 +426,55 @@ class SyncView(views.APIView):
         serializer.is_valid(raise_exception=True)
 
         source = serializer.validated_data['source']
+        connection_id = serializer.validated_data.get('connection_id')
         days = serializer.validated_data['days']
         date_from = serializer.validated_data.get('date_from')
         date_to = serializer.validated_data.get('date_to')
 
+        def get_bank(bank_name):
+            """Повертає конкретне підключення по connection_id або перше активне"""
+            qs = BankConnection.objects.filter(user=request.user, bank_name=bank_name)
+            if connection_id:
+                return qs.get(pk=connection_id)
+            return qs.filter(status='active').first() or qs.first()
+
+        def get_exchange(exchange_name):
+            """Повертає конкретну біржу по connection_id або першу активну"""
+            qs = CryptoExchange.objects.filter(user=request.user, exchange_name=exchange_name)
+            if connection_id:
+                return qs.get(pk=connection_id)
+            return qs.filter(status='active').first() or qs.first()
+
         try:
             if source == 'monobank':
-                connection = BankConnection.objects.get(
-                    user=request.user,
-                    bank_name='monobank'
-                )
+                connection = get_bank('monobank')
+                if not connection:
+                    raise BankConnection.DoesNotExist
                 service = MonobankService(request.user)
                 result = service.sync_transactions(connection, days=days, date_from=date_from, date_to=date_to)
                 return Response(result)
 
-            elif source == 'pumb':
-                connection = BankConnection.objects.get(
-                    user=request.user,
-                    bank_name='pumb'
-                )
-                service = PUMBService(connection.access_token)
-                result = service.sync_transactions(connection, days=days)
-                return Response(result)
-
             elif source == 'binance':
-                exchange = CryptoExchange.objects.get(
-                    user=request.user,
-                    exchange_name='binance'
-                )
+                exchange = get_exchange('binance')
+                if not exchange:
+                    raise CryptoExchange.DoesNotExist
                 service = BinanceService(exchange.api_key, exchange.api_secret)
                 result = service.sync_transactions(exchange, days=days)
                 return Response(result)
 
             elif source == 'bybit':
-                exchange = CryptoExchange.objects.get(
-                    user=request.user,
-                    exchange_name='bybit'
-                )
+                exchange = get_exchange('bybit')
+                if not exchange:
+                    raise CryptoExchange.DoesNotExist
                 service = BybitService(exchange.api_key, exchange.api_secret)
                 result = service.sync_transactions(exchange, days=days)
                 return Response(result)
 
             elif source == 'okx':
-                exchange = CryptoExchange.objects.get(
-                    user=request.user,
-                    exchange_name='okx'
-                )
-                service = OKXService(
-                    exchange.api_key, exchange.api_secret, exchange.api_passphrase)
+                exchange = get_exchange('okx')
+                if not exchange:
+                    raise CryptoExchange.DoesNotExist
+                service = OKXService(exchange.api_key, exchange.api_secret, exchange.api_passphrase)
                 result = service.sync_transactions(exchange, days=days)
                 return Response(result)
 

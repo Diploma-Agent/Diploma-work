@@ -99,6 +99,7 @@ class SyncLogSerializer(serializers.ModelSerializer):
 class SyncRequestSerializer(serializers.Serializer):
     """Serializer для запиту синхронізації"""
     source = serializers.CharField()
+    connection_id = serializers.IntegerField(required=False, allow_null=True)  # конкретне підключення
     days = serializers.IntegerField(default=30, min_value=1, max_value=365, required=False)
     date_from = serializers.DateField(required=False, allow_null=True)
     date_to = serializers.DateField(required=False, allow_null=True)

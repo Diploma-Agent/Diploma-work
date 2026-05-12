@@ -225,7 +225,7 @@ function Profile() {
 			setSyncingBankId(bank.id);
 			setError('');
 			const token = localStorage.getItem('token');
-			const result = await financeService.syncTransactions(token, bank.bank_name, 30);
+			const result = await financeService.syncTransactions(token, bank.bank_name, 30, null, null, bank.id);
 			setSuccess(`Синхронізовано: +${result.transactions_added} нових, оновлено ${result.transactions_updated}`);
 			setTimeout(() => setSuccess(''), 5000);
 		} catch (err) {
