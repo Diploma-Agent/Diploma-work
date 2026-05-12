@@ -72,8 +72,15 @@ export const financeService = {
 	},
 
 	// === АНАЛІТИКА БАНКУ ===
-	async getBankAnalytics(token) {
-		const response = await fetch(`${API_URL}/analytics/bank/`, {
+	async getBankAnalytics(token, connectionIds = null) {
+		let url = `${API_URL}/analytics/bank/`;
+		
+		if (connectionIds) {
+			const idParam = Array.isArray(connectionIds) ? connectionIds.join(',') : connectionIds;
+			url += `?connection_id=${idParam}`;
+		}
+
+		const response = await fetch(url, {
 			headers: {
 				'Authorization': `Bearer ${token}`,
 			},

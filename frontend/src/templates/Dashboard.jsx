@@ -8,9 +8,6 @@ import '../styles/dashboardStyles.css';
 
 const SOURCE_ICONS = {
 	monobank: '🏦',
-	binance:  '₿',
-	bybit:    '📊',
-	okx:      '🔷',
 	manual:   '✍️',
 };
 
@@ -45,15 +42,23 @@ function Dashboard() {
 	// Фільтр по акаунтах
 	const [accounts, setAccounts]         = useState([]);
 	const [selectedIds, setSelectedIds]   = useState([]); // [] = всі
+	const selectAccount = (id) => setSelectedIds([id]);
 
 	// Завантажуємо акаунти один раз
 	useEffect(() => {
-		const token = localStorage.getItem('token');
-		if (!token) return;
-		financeService.getAccounts(token)
-			.then(data => setAccounts(data || []))
-			.catch(() => {});
-	}, []);
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        financeService.getAccounts(token)
+            .then(data => {
+                const banksOnly = (data || []).filter(acc => acc.type === 'bank');
+                setAccounts(banksOnly);
+
+				if (banksOnly.length > 0 && selectedIds.length === 0) {
+                	setSelectedIds([banksOnly[0].id]);
+            	}
+            })
+            .catch(() => {});
+    }, [selectedIds.length]);
 
 	// Завантажуємо транзакції при зміні вибраних акаунтів
 	const loadTransactions = useCallback(() => {
@@ -69,29 +74,39 @@ function Dashboard() {
 	}, [getTransactions, selectedIds]);
 
 	useEffect(() => {
-		const token = localStorage.getItem('token');
-		if (!token) { navigate('/login'); return; }
+        const token = localStorage.getItem('token');
+        if (!token) { navigate('/login'); return; }
 
-		// Ім'я профілю
-		const saved = JSON.parse(localStorage.getItem('user_profile') || '{}');
-		if (saved.first_name) setUserName(saved.first_name);
-		authService.getMe(token)
-			.then(u => setUserName(u.first_name || u.username || 'Користувачу'))
-			.catch(() => {});
+        // Ім'я профілю з кешу або API
+        const saved = JSON.parse(localStorage.getItem('user_profile') || '{}');
+        if (saved.first_name) setUserName(saved.first_name);
+        
+        authService.getMe(token)
+            .then(u => setUserName(u.first_name || u.username || 'Користувачу'))
+            .catch(() => {});
+    }, [navigate]);
 
-		// Баланс
-		getBalance()
-			.then(res => { if (res) setBalance(res.balance ?? res.total_balance ?? 0); })
+	useEffect(() => {
+		if (accounts.length > 0 && selectedIds.length === 0) return;
+
+		setLoadingBalance(true);
+		
+		const currentId = selectedIds[0]; 
+
+		getBalance(currentId) 
+			.then(res => { 
+				if (res) {
+					setBalance(res.balance ?? res.total_balance ?? 0); 
+				}
+			})
 			.catch(() => setBalance(0))
 			.finally(() => setLoadingBalance(false));
-	}, [navigate, getBalance]);
+				
+	}, [getBalance, selectedIds, accounts.length]);
 
 	useEffect(() => { loadTransactions(); }, [loadTransactions]);
 
 	const fmt = (n) => (Number(n) || 0).toLocaleString('uk-UA');
-
-	const toggleAccount = (id) =>
-		setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
 	return (
 		<div className="dashboard-wrapper">
@@ -106,19 +121,13 @@ function Dashboard() {
 					</div>
 
 					{/* ── Фільтр по акаунтах ── */}
-					{accounts.length > 0 && (
+					{accounts.length >= 2 && (
 						<div className="dashboard-account-filter">
-							<button
-								className={`dash-chip ${selectedIds.length === 0 ? 'dash-chip--active' : ''}`}
-								onClick={() => setSelectedIds([])}
-							>
-								Всі
-							</button>
 							{accounts.map(acc => (
 								<button
 									key={acc.id}
 									className={`dash-chip ${selectedIds.includes(acc.id) ? 'dash-chip--active' : ''}`}
-									onClick={() => toggleAccount(acc.id)}
+									onClick={() => selectAccount(acc.id)}
 								>
 									{SOURCE_ICONS[acc.source] || '💼'} {acc.name}
 								</button>
@@ -130,9 +139,9 @@ function Dashboard() {
 					<div className="dashboard-summary-section">
 						<div className="dashboard-total-card">
 							<h2>
-								{selectedIds.length > 0
-									? accounts.filter(a => selectedIds.includes(a.id)).map(a => a.name).join(' + ')
-									: 'Загальний баланс'}
+								{selectedIds.length > 0 
+									? accounts.find(a => a.id === selectedIds[0])?.name 
+									: 'Завантаження рахунку...'}
 							</h2>
 							<div className="balance-info">
 								{loadingBalance

@@ -34,7 +34,8 @@ export function FinanceProvider({ children }) {
     }, [withCache]);
 
     const getBalance = useCallback((connectionIds = []) => {
-        const key = connectionIds.length > 0 ? `balance:${connectionIds.sort().join(',')}` : 'balance';
+        const idsArray = Array.isArray(connectionIds) ? connectionIds : [connectionIds];
+        const key = idsArray.length > 0 ? `balance:${idsArray.sort().join(',')}` : 'balance';
         return withCache(key, () => financeService.getBankAnalytics(getToken(), connectionIds));
     }, [withCache]);
 

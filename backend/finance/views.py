@@ -805,36 +805,44 @@ class ExchangeOrdersView(views.APIView):
 
 
 class BankAnalyticsView(views.APIView):
-    """Аналітика банківського рахунку"""
+    """Аналітика конкретного банківського рахунку за його ID"""
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
+        # Отримуємо ID з параметрів (наприклад, ?connection_id=5)
+        conn_id = request.query_params.get('connection_id')
+        
         try:
-            bank = BankConnection.objects.filter(
-                user=request.user,
-                bank_name='monobank',
-                status='active'
-            ).first()
+            if conn_id:
+                # Шукаємо конкретне підключення, яке вибрав користувач
+                bank = BankConnection.objects.filter(
+                    user=request.user, 
+                    id=conn_id, 
+                    status='active'
+                ).first()
+            else:
+                # Якщо ID не передано, беремо перший (для початкового завантаження)
+                bank = BankConnection.objects.filter(
+                    user=request.user, 
+                    status='active'
+                ).first()
 
             if not bank:
-                return Response({'error': 'Банк не підключено'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'error': 'Банк не знайдено'}, status=status.HTTP_404_NOT_FOUND)
 
-            # Баланс тільки основних рахунків (без накопичувальних/кредитних)
-            balance, _ = _get_real_balance(bank.access_token)
+            # ВАЖЛИВО: Використовуємо токен САМЕ ЦЬОГО знайденого банку
+            balance, account_ids = _get_real_balance(bank.access_token)
 
-            # Транзакції тільки з основних UAH-рахунків, без внутрішніх переказів
-            transactions = _get_uah_transactions(bank.access_token, days=30)
-
+            # Повертаємо дані саме для цього банку
             return Response({
                 'balance': balance,
-                'transactions': transactions
+                'name': bank.name,
+                'source': bank.bank_name,
+                'id': bank.id
             })
 
         except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 def _get_real_balance(access_token: str) -> tuple:
