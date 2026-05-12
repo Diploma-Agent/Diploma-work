@@ -123,6 +123,8 @@
 	border: 1px solid rgba(148, 163, 184, 0.15);
 	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 	transition: all 0.3s ease;
+	position: relative; 
+    z-index: 50;
 }
 
 .transactions-filters:hover {
