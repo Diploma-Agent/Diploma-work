@@ -421,14 +421,8 @@ function Analytics() {
                             <h1 className="analytics-title">🏦 Аналітика Банку</h1>
 
                             {/* Фільтр по підключеним банкам */}
-                            {banks.length > 1 && (
+                            {banks.length > 0 && (
                                 <div className="bank-account-chips">
-                                    <button
-                                        className={`account-chip ${selectedBankIds.length === 0 ? 'account-chip--active' : ''}`}
-                                        onClick={() => setSelectedBankIds([])}
-                                    >
-                                        Всі банки
-                                    </button>
                                     {banks.map(b => (
                                         <button
                                             key={b.id}
