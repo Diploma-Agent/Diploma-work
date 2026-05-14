@@ -266,7 +266,7 @@ function Transactions() {
 							<div className="transactions-empty">
 								<span className="empty-icon">📭</span>
 								<p>Транзакцій не знайдено</p>
-								<p className="empty-hint">
+								<p className="transactions-empty-hint">
 									{transactions.length === 0
 										? 'Додайте банк в налаштуваннях профілю для автоматичної синхронізації транзакцій'
 										: 'Спробуйте змінити фільтри пошуку'}
