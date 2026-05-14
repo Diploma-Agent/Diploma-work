@@ -54,25 +54,25 @@ function Analytics() {
         try {
             const today = new Date();
             const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
+            // Передаємо ID конкретного банку щоб отримати його баланс
+            const connectionId = bankIds.length === 1 ? bankIds[0] : null;
 
             let bankData;
             if (isCurrentMonth) {
-                // Поточний місяць — беремо через analytics endpoint + транзакції з фільтром
                 const [analyticsData, txList] = await Promise.all([
-                    financeService.getBankAnalytics(token).catch(() => ({ balance: 0 })),
+                    financeService.getBankAnalytics(token, connectionId).catch(() => ({ balance: 0 })),
                     financeService.getTransactions(token, 'all', 31, '', '', bankIds, [])
                 ]);
                 const transactions = Array.isArray(txList) ? txList : (txList?.transactions || []);
                 bankData = { balance: analyticsData.balance, transactions };
             } else {
-                // Минулий місяць — беремо транзакції за конкретний діапазон + поточний баланс
                 const mm       = String(month + 1).padStart(2, '0');
                 const lastDay  = new Date(year, month + 1, 0).getDate();
                 const dateFrom = `${year}-${mm}-01`;
                 const dateTo   = `${year}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
                 const [analyticsData, txList] = await Promise.all([
-                    financeService.getBankAnalytics(token).catch(() => ({ balance: 0 })),
+                    financeService.getBankAnalytics(token, connectionId).catch(() => ({ balance: 0 })),
                     financeService.getTransactions(token, 'all', 31, dateFrom, dateTo, bankIds, [])
                 ]);
 
