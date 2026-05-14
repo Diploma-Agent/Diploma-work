@@ -1129,6 +1129,92 @@ class AIAnomalyView(views.APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+def _get_all_exchange_balances(user):
+    """
+    Повертає список портфелів по всіх активних біржах користувача.
+    Формат: [{'exchange': 'binance', 'total_usdt': 1234.56, 'coins': [{'coin': 'BTC', 'balance': 0.5, 'usd_value': 30000}]}]
+    Помилки окремих бірж мовчки ігноруються.
+    """
+    exchanges = CryptoExchange.objects.filter(user=user, status='active')
+    result = []
+
+    # Кешуємо ціни Binance один раз для всіх бірж
+    prices = {}
+    try:
+        import requests as req
+        price_resp = req.get('https://api.binance.com/api/v3/ticker/price', timeout=5).json()
+        for p in price_resp:
+            sym = p.get('symbol', '')
+            if sym.endswith('USDT'):
+                prices[sym[:-4]] = float(p.get('price', 0))
+        prices['USDT'] = 1.0
+        prices['BUSD'] = 1.0
+        prices['USDC'] = 1.0
+    except Exception:
+        pass
+
+    for ex in exchanges:
+        name = ex.exchange_name
+        try:
+            coins = []
+            total_usdt = 0.0
+
+            if name == 'binance':
+                service = BinanceService(ex.api_key, ex.api_secret)
+                raw = service.get_balances()
+                for b in raw:
+                    asset = b.get('asset', '')
+                    bal = float(b.get('free', 0)) + float(b.get('locked', 0))
+                    if bal <= 0:
+                        continue
+                    usd = round(bal * prices.get(asset, 0), 4)
+                    total_usdt += usd
+                    coins.append({'coin': asset, 'balance': round(bal, 8), 'usd_value': usd})
+
+            elif name == 'bybit':
+                service = BybitService(ex.api_key, ex.api_secret)
+                raw = service.get_wallet_balance()
+                wallet = (raw.get('list') or [{}])[0]
+                total_usdt = float(wallet.get('totalEquity', 0))
+                for c in wallet.get('coin', []):
+                    bal = float(c.get('walletBalance', 0))
+                    if bal <= 0:
+                        continue
+                    coins.append({
+                        'coin': c.get('coin', ''),
+                        'balance': round(bal, 8),
+                        'usd_value': round(float(c.get('usdValue', 0)), 4)
+                    })
+
+            elif name == 'okx':
+                service = OKXService(ex.api_key, ex.api_secret, ex.api_passphrase)
+                raw = service.get_account_balance()
+                if raw:
+                    data = raw[0]
+                    total_usdt = float(data.get('totalEq', 0))
+                    for d in data.get('details', []):
+                        bal = float(d.get('eq', 0))
+                        if bal <= 0:
+                            continue
+                        coins.append({
+                            'coin': d.get('ccy', ''),
+                            'balance': round(bal, 8),
+                            'usd_value': round(float(d.get('eqUsd', 0)), 4)
+                        })
+
+            if coins or total_usdt:
+                result.append({
+                    'exchange': name,
+                    'total_usdt': round(total_usdt, 2),
+                    'coins': coins
+                })
+
+        except Exception as e:
+            print(f"[_get_all_exchange_balances] {name} error: {e}")
+
+    return result
+
+
 class AIChatView(views.APIView):
     """AI Чат Асистент з персистентною історією в БД"""
     permission_classes = (IsAuthenticated,)
@@ -1144,7 +1230,16 @@ class AIChatView(views.APIView):
                 user=request.user, bank_name='monobank', status='active'
             ).first()
 
+            # Завжди намагаємося отримати дані бірж (навіть якщо банк не підключений)
+            try:
+                exchange_portfolio = _get_all_exchange_balances(request.user)
+            except Exception:
+                exchange_portfolio = []
+
             context = {}
+            if exchange_portfolio:
+                context['exchange_portfolio'] = exchange_portfolio
+
             if bank:
                 try:
                     balance, _ = _get_real_balance(bank.access_token)
@@ -1203,6 +1298,7 @@ class AIChatView(views.APIView):
                     'month': now.strftime("%B %Y"),
                     'anomaly_count': anomaly_count,
                     'anomalous_transactions': anomalous_txs,
+                    'exchange_portfolio': exchange_portfolio,
                     'recent_transactions': [
                         {
                             'date': t.transaction_date.isoformat()[:10],
