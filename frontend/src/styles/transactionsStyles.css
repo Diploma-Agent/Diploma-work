@@ -425,11 +425,12 @@
 	margin: 8px 0;
 }
 
-.transactions-empty-hint {
+.transactions-empty .transactions-empty-hint {
 	font-size: 0.9375rem;
 	color: #64748b;
 	margin-top: 8px;
 	max-width: 500px;
+	font-weight: 400;
 }
 
 /* Модальне вікно */
