@@ -978,6 +978,8 @@ class AIForecastView(views.APIView):
         import json
 
         days = int(request.query_params.get('days', 30))
+        connection_id_raw = request.query_params.get('connection_id', '')
+        connection_id = int(connection_id_raw) if connection_id_raw.strip().isdigit() else None
 
         try:
             # Беремо транзакції з БД за останні 180 днів (6 міс) для якісного тренду.
@@ -998,6 +1000,10 @@ class AIForecastView(views.APIView):
                     'type': {'$in': ['income', 'expense']},
                     'transaction_date': {'$gte': dt_from, '$lte': dt_to}
                 }
+                # Фільтр по конкретному банку якщо передано connection_id
+                if connection_id:
+                    query['connection_id'] = connection_id
+
                 cursor = collection.find(query).sort('transaction_date', 1)
 
                 for doc in cursor:
@@ -1010,7 +1016,7 @@ class AIForecastView(views.APIView):
                         'id': str(doc.get('_id', '')),
                     })
                 client.close()
-                print(f"[AIForecastView] Отримано {len(transactions)} транзакцій із БД за 180 днів")
+                print(f"[AIForecastView] connection_id={connection_id} | Отримано {len(transactions)} транзакцій із БД за 180 днів")
             except Exception as db_err:
                 print(f"[AIForecastView] DB error, fallback to Monobank API: {db_err}")
                 bank = BankConnection.objects.filter(
@@ -1018,10 +1024,10 @@ class AIForecastView(views.APIView):
                 ).first()
                 if bank:
                     transactions = _get_uah_transactions(bank.access_token, days=90)
-            
-            # Створюємо хеш на основі транзакцій та днів, щоб перевірити, чи змінились дані
+
+            # Створюємо хеш на основі транзакцій, днів та connection_id
             tx_light = [{'id': t.get('id'), 'amount': t.get('amount')} for t in transactions]
-            cache_string = json.dumps({'user': request.user.id, 'days': days, 'tx': tx_light}, sort_keys=True)
+            cache_string = json.dumps({'user': request.user.id, 'days': days, 'conn': connection_id, 'tx': tx_light}, sort_keys=True)
             cache_hash = hashlib.md5(cache_string.encode('utf-8')).hexdigest()
             cache_key = f'ai_forecast_{request.user.id}_{cache_hash}'
             

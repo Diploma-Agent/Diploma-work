@@ -115,13 +115,7 @@ function Analytics() {
                 })
                 .catch(() => setBanks([]));
 
-            setForecastLoading(true);
-            const fetchForecast = financeService.aiForecast(token, 30)
-                .then(data => setForecastData(data))
-                .catch(err => console.error('Помилка AI прогнозу:', err))
-                .finally(() => setForecastLoading(false));
-
-            await Promise.all([fetchExchanges, fetchBanks, fetchForecast]);
+            await Promise.all([fetchExchanges, fetchBanks]);
             setLoading(false);
         };
         initData();
@@ -131,6 +125,18 @@ function Analytics() {
     useEffect(() => {
         if (!loading) loadBankDataForPeriod(selectedMonth, selectedYear, selectedBankId ? [selectedBankId] : []);
     }, [loading, selectedMonth, selectedYear, selectedBankId, loadBankDataForPeriod]);
+
+    // 3. Прогноз — перезавантажуємо при зміні вибраного банку
+    useEffect(() => {
+        if (!selectedBankId) return;
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        setForecastLoading(true);
+        financeService.aiForecast(token, 30, selectedBankId)
+            .then(data => setForecastData(data))
+            .catch(err => console.error('Помилка AI прогнозу:', err))
+            .finally(() => setForecastLoading(false));
+    }, [selectedBankId]);
 
     // 2. Завантаження даних конкретної біржі при зміні вибору
     useEffect(() => {

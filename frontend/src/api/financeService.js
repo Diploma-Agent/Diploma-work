@@ -241,8 +241,10 @@ export const financeService = {
 		return response.json();
 	},
 
-	async aiForecast(token, days = 30) {
-		const response = await fetch(`${API_URL}/ai/forecast/?days=${days}`, {
+	async aiForecast(token, days = 30, connectionId = null) {
+		let url = `${API_URL}/ai/forecast/?days=${days}`;
+		if (connectionId) url += `&connection_id=${connectionId}`;
+		const response = await fetch(url, {
 			headers: { 'Authorization': `Bearer ${token}` },
 		});
 
