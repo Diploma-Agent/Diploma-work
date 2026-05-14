@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Navbar from '../components/Navbar';
@@ -47,7 +47,7 @@ function Analytics() {
     const [hoveredLegendIdx, setHoveredLegendIdx] = useState(null);
 
     // Завантаження банківських даних для вибраного місяця
-    const loadBankDataForPeriod = async (month, year, bankIds = []) => {
+    const loadBankDataForPeriod = useCallback(async (month, year, bankIds = []) => {
         const token = localStorage.getItem('token');
         if (!token) return;
         setBankLoading(true);
@@ -89,7 +89,7 @@ function Analytics() {
         } finally {
             setBankLoading(false);
         }
-    };
+    }, []);
 
     // 1. Початкове завантаження
     useEffect(() => {
@@ -121,12 +121,12 @@ function Analytics() {
             setLoading(false);
         };
         initData();
-    }, [navigate]);
+    }, [navigate, loadBankDataForPeriod, selectedMonth, selectedYear]);
 
     // 2. Перезавантаження банку при зміні місяця/року або вибраних банків
     useEffect(() => {
         if (!loading) loadBankDataForPeriod(selectedMonth, selectedYear, selectedBankIds);
-    }, [selectedMonth, selectedYear, selectedBankIds]);
+    }, [loading, selectedMonth, selectedYear, selectedBankIds, loadBankDataForPeriod]);
 
     // 2. Завантаження даних конкретної біржі при зміні вибору
     useEffect(() => {
@@ -387,31 +387,36 @@ function Analytics() {
                     </div>
                 ) : (
                     <div className="analytics-container">
-
-                        {/* Секція Біржі */}
-                        <div className="analytics-header">
-                            <h1 className="analytics-title">📊 Аналітика Біржі</h1>
-                            {renderExchangeSelector()}
-                        </div>
-
                         {error && <div className="analytics-error">{error}</div>}
 
-                        {exchanges.length > 0 ? (
-                            <div className="analytics-grid">
-                                {renderBalance()}
-                                {renderOrders()}
-                            </div>
-                        ) : (
+                        {exchanges.length === 0 && banks.length === 0 ? (
                             <div className="analytics-card analytics-card--full">
                                 <div className="empty-state">
-                                    <div className="empty-icon">📉</div>
-                                    <h3>Біржі не підключено</h3>
-                                    <p>Перейдіть в налаштування профілю, щоб додати API ключі біржі.</p>
+                                    <div className="empty-icon">🔌</div>
+                                    <h3>Нічого не підключено</h3>
+                                    <p>Перейдіть в налаштування профілю, щоб додати API ключі бірж або банку для збору аналітики.</p>
                                 </div>
                             </div>
-                        )}
+                        ) : (
+                            <>
+                                {exchanges.length > 0 && (
+                                    <>
+                                        {/* Секція Біржі */}
+                                        <div className="analytics-header">
+                                            <h1 className="analytics-title">📊 Аналітика Біржі</h1>
+                                            {renderExchangeSelector()}
+                                        </div>
 
-                        {/* Секція Банку */}
+                                        <div className="analytics-grid">
+                                            {renderBalance()}
+                                            {renderOrders()}
+                                        </div>
+                                    </>
+                                )}
+
+                                {banks.length > 0 && (
+                                    <>
+                                        {/* Секція Банку */}
                         <div className="analytics-header analytics-header--bank">
                             <h1 className="analytics-title">🏦 Аналітика Банку</h1>
 
@@ -748,14 +753,10 @@ function Analytics() {
                                 </div>
 
                             </>
-                        ) : (
-                            <div className="analytics-card analytics-card--full analytics-card--bank">
-                                <div className="empty-state">
-                                    <div className="empty-icon">🏦</div>
-                                    <h3>Немає даних про банківський рахунок</h3>
-                                    <p>Додайте банк в налаштуваннях профілю або синхронізуйте транзакції</p>
-                                </div>
-                            </div>
+                        ) : null}
+                                    </>
+                                )}
+                            </>
                         )}
 
                     </div>
