@@ -54,25 +54,25 @@ function Analytics() {
         try {
             const today = new Date();
             const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
+            // Передаємо ID конкретного банку щоб отримати його баланс
+            const connectionId = bankIds.length === 1 ? bankIds[0] : null;
 
             let bankData;
             if (isCurrentMonth) {
-                // Поточний місяць — беремо через analytics endpoint + транзакції з фільтром
                 const [analyticsData, txList] = await Promise.all([
-                    financeService.getBankAnalytics(token).catch(() => ({ balance: 0 })),
+                    financeService.getBankAnalytics(token, connectionId).catch(() => ({ balance: 0 })),
                     financeService.getTransactions(token, 'all', 31, '', '', bankIds, [])
                 ]);
                 const transactions = Array.isArray(txList) ? txList : (txList?.transactions || []);
                 bankData = { balance: analyticsData.balance, transactions };
             } else {
-                // Минулий місяць — беремо транзакції за конкретний діапазон + поточний баланс
                 const mm       = String(month + 1).padStart(2, '0');
                 const lastDay  = new Date(year, month + 1, 0).getDate();
                 const dateFrom = `${year}-${mm}-01`;
                 const dateTo   = `${year}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
                 const [analyticsData, txList] = await Promise.all([
-                    financeService.getBankAnalytics(token).catch(() => ({ balance: 0 })),
+                    financeService.getBankAnalytics(token, connectionId).catch(() => ({ balance: 0 })),
                     financeService.getTransactions(token, 'all', 31, dateFrom, dateTo, bankIds, [])
                 ]);
 
@@ -115,13 +115,7 @@ function Analytics() {
                 })
                 .catch(() => setBanks([]));
 
-            setForecastLoading(true);
-            const fetchForecast = financeService.aiForecast(token, 30)
-                .then(data => setForecastData(data))
-                .catch(err => console.error('Помилка AI прогнозу:', err))
-                .finally(() => setForecastLoading(false));
-
-            await Promise.all([fetchExchanges, fetchBanks, fetchForecast]);
+            await Promise.all([fetchExchanges, fetchBanks]);
             setLoading(false);
         };
         initData();
@@ -131,6 +125,18 @@ function Analytics() {
     useEffect(() => {
         if (!loading) loadBankDataForPeriod(selectedMonth, selectedYear, selectedBankId ? [selectedBankId] : []);
     }, [loading, selectedMonth, selectedYear, selectedBankId, loadBankDataForPeriod]);
+
+    // 3. Прогноз — перезавантажуємо при зміні вибраного банку
+    useEffect(() => {
+        if (!selectedBankId) return;
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        setForecastLoading(true);
+        financeService.aiForecast(token, 30, selectedBankId)
+            .then(data => setForecastData(data))
+            .catch(err => console.error('Помилка AI прогнозу:', err))
+            .finally(() => setForecastLoading(false));
+    }, [selectedBankId]);
 
     // 2. Завантаження даних конкретної біржі при зміні вибору
     useEffect(() => {
@@ -544,67 +550,72 @@ function Analytics() {
                                                     {forecastData.data.forecast_balance >= 0 ? '+' : ''}
                                                     {forecastData.data.forecast_balance.toLocaleString('uk-UA')} UAH
                                                 </div>
-                                                {forecastData.data.accuracy?.expenses?.r2 != null && (
-                                                    <div className="accuracy-section">
-                                                        <div className="accuracy-title">Точність моделі</div>
-                                                        <div className="accuracy-grid">
-                                                            <div className="accuracy-item">
-                                                                <div className="accuracy-label">R² витрат</div>
-                                                                <div className={`accuracy-metric ${
-                                                                    (forecastData.data.accuracy.expenses.r2 ?? 0) >= 0.7 ? 'r2-high'
-                                                                    : (forecastData.data.accuracy.expenses.r2 ?? 0) >= 0.4 ? 'r2-mid'
-                                                                    : 'r2-low'
-                                                                }`}>
-                                                                    {forecastData.data.accuracy.expenses.r2?.toFixed(3) ?? '—'}
-                                                                    {' '}
-                                                                    <span className="r2-label-text">
-                                                                        {(forecastData.data.accuracy.expenses.r2 ?? 0) >= 0.7 ? '(висока)'
-                                                                         : (forecastData.data.accuracy.expenses.r2 ?? 0) >= 0.4 ? '(задовільна)'
-                                                                         : '(низька)'}
-                                                                    </span>
+                                                {(() => {
+                                                    const totalWeeks = (forecastData.data.accuracy?.expenses?.train_weeks ?? 0) +
+                                                                       (forecastData.data.accuracy?.expenses?.test_weeks ?? 0);
+                                                    const expR2 = forecastData.data.accuracy?.expenses?.r2 ?? 0;
+                                                    const incR2 = forecastData.data.accuracy?.income?.r2 ?? 0;
+
+                                                    const r2Label = (r2) => {
+                                                        if (r2 >= 0.7) return { text: 'висока', cls: 'r2-high' };
+                                                        if (r2 >= 0.4) return { text: 'задовільна', cls: 'r2-mid' };
+                                                        if (r2 >= 0.0) return { text: 'низька', cls: 'r2-low' };
+                                                        return { text: 'нестабільна', cls: 'r2-low' };
+                                                    };
+                                                    const r2Display = (r2) => r2 < -1 ? '< −1' : r2.toFixed(3);
+
+                                                    if (totalWeeks < 8) {
+                                                        return (
+                                                            <div className="accuracy-section">
+                                                                <div className="forecast-low-data-hint">
+                                                                    ⚠️ Прогноз орієнтовний — недостатньо даних ({totalWeeks} тижн.). Для надійного результату потрібно 8+ тижнів транзакцій.
                                                                 </div>
                                                             </div>
-                                                            <div className="accuracy-item">
-                                                                <div className="accuracy-label">
-                                                                    R² доходів
-                                                                    {forecastData.data.inc_aggregation && (
-                                                                        <span className="agg-badge">{forecastData.data.inc_aggregation}</span>
-                                                                    )}
-                                                                </div>
-                                                                <div className={`accuracy-metric ${
-                                                                    (forecastData.data.accuracy.income.r2 ?? 0) >= 0.7 ? 'r2-high'
-                                                                    : (forecastData.data.accuracy.income.r2 ?? 0) >= 0.4 ? 'r2-mid'
-                                                                    : 'r2-low'
-                                                                }`}>
-                                                                    {forecastData.data.accuracy.income.r2?.toFixed(3) ?? '—'}
-                                                                    {' '}
-                                                                    <span className="r2-label-text">
-                                                                        {(forecastData.data.accuracy.income.r2 ?? 0) >= 0.7 ? '(висока)'
-                                                                         : (forecastData.data.accuracy.income.r2 ?? 0) >= 0.4 ? '(задовільна)'
-                                                                         : '(низька)'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="accuracy-item">
-                                                                <div className="accuracy-label">MAE витрат</div>
-                                                                <div className="accuracy-metric">
-                                                                    {forecastData.data.accuracy.expenses.mae != null
-                                                                        ? `${forecastData.data.accuracy.expenses.mae.toLocaleString('uk-UA')} грн`
-                                                                        : '—'}
-                                                                </div>
-                                                            </div>
-                                                            {forecastData.data.accuracy.expenses.train_weeks != null && (
+                                                        );
+                                                    }
+
+                                                    const expLbl = r2Label(expR2);
+                                                    const incLbl = r2Label(incR2);
+
+                                                    return (
+                                                        <div className="accuracy-section">
+                                                            <div className="accuracy-title">Точність моделі</div>
+                                                            <div className="accuracy-grid">
                                                                 <div className="accuracy-item">
-                                                                    <div className="accuracy-label">Тижнів даних</div>
-                                                                    <div className="accuracy-metric">
-                                                                        {(forecastData.data.accuracy.expenses.train_weeks ?? 0) +
-                                                                         (forecastData.data.accuracy.expenses.test_weeks ?? 0)}
+                                                                    <div className="accuracy-label">R² витрат</div>
+                                                                    <div className={`accuracy-metric ${expLbl.cls}`}>
+                                                                        {r2Display(expR2)}{' '}
+                                                                        <span className="r2-label-text">({expLbl.text})</span>
                                                                     </div>
                                                                 </div>
-                                                            )}
+                                                                <div className="accuracy-item">
+                                                                    <div className="accuracy-label">
+                                                                        R² доходів
+                                                                        {forecastData.data.inc_aggregation && (
+                                                                            <span className="agg-badge">{forecastData.data.inc_aggregation}</span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className={`accuracy-metric ${incLbl.cls}`}>
+                                                                        {r2Display(incR2)}{' '}
+                                                                        <span className="r2-label-text">({incLbl.text})</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="accuracy-item">
+                                                                    <div className="accuracy-label">MAE витрат</div>
+                                                                    <div className="accuracy-metric">
+                                                                        {forecastData.data.accuracy.expenses.mae != null
+                                                                            ? `${forecastData.data.accuracy.expenses.mae.toLocaleString('uk-UA')} грн`
+                                                                            : '—'}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="accuracy-item">
+                                                                    <div className="accuracy-label">Тижнів даних</div>
+                                                                    <div className="accuracy-metric">{totalWeeks}</div>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    );
+                                                })()}
                                             </>
                                         ) : (
                                             <div className="forecast-info">

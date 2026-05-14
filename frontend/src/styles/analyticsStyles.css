@@ -1134,6 +1134,16 @@
     margin-bottom: 12px;
 }
 
+.forecast-low-data-hint {
+    font-size: 0.82rem;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    line-height: 1.5;
+}
+
 .accuracy-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
