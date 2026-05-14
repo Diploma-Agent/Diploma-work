@@ -424,21 +424,6 @@ function Analytics() {
                         <div className="analytics-header analytics-header--bank">
                             <h1 className="analytics-title">🏦 Аналітика Банку</h1>
 
-                            {/* Фільтр по підключеним банкам */}
-                            {banks.length > 0 && (
-                                <div className="bank-account-chips">
-                                    {banks.map(b => (
-                                        <button
-                                            key={b.id}
-                                            className={`account-chip ${selectedBankId === b.id ? 'account-chip--active' : ''}`}
-                                            onClick={() => setSelectedBankId(b.id)}
-                                        >
-                                            🏦 {b.name || b.bank_name}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-
                             <div className="month-picker">
                                 <button
                                     className="month-nav-btn"
@@ -460,6 +445,21 @@ function Analytics() {
                                 >›</button>
                             </div>
                         </div>
+
+                        {/* Фільтр по підключеним банкам — окремий ряд під заголовком */}
+                        {banks.length > 0 && (
+                            <div className="bank-account-chips">
+                                {banks.map(b => (
+                                    <button
+                                        key={b.id}
+                                        className={`account-chip ${selectedBankId === b.id ? 'account-chip--active' : ''}`}
+                                        onClick={() => setSelectedBankId(b.id)}
+                                    >
+                                        🏦 {b.name || b.bank_name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         {bankLoading ? (
                             <div className="analytics-card analytics-card--full analytics-card--bank" style={{ textAlign: 'center', padding: '40px' }}>

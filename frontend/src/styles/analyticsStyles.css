@@ -42,7 +42,7 @@
 .analytics-page {
     min-height: 100vh;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 80px 20px 40px;
+    padding: calc(var(--navbar-height, 88px) + 8px) 20px 40px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -69,7 +69,8 @@
 .analytics-container {
     width: 90%;
     max-width: 1600px;
-    height: 85vh;
+    /* use min-height so mobile browser UI changes don't cause abrupt jumps */
+    min-height: calc(100vh - var(--navbar-height, 88px) - 32px);
     background: rgba(30, 41, 59, 0.95);
     border-radius: 20px;
     padding: 40px;
@@ -96,18 +97,21 @@
 }
 
 .analytics-header--bank {
-    margin-top: 80px;
-    padding-top: 40px;
+    margin-top: 40px;
+    padding-top: 20px;
     border-top: 2px solid rgba(255, 255, 255, 0.15);
+    margin-bottom: 0;
 }
 
 /* Chips для вибору банківських акаунтів в аналітиці */
 .bank-account-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin: 12px 0 4px;
+    gap: 12px;          
+    margin: 20px 0 35px; 
     width: 100%;
+    position: relative;
+    z-index: 8;
 }
 
 /* Перевикористовуємо стилі з Transactions */
@@ -123,6 +127,26 @@
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
+}
+
+/* Ensure chips sit above following content and are visible */
+.bank-account-chips {
+    position: relative;
+    z-index: 8;
+    margin-bottom: 12px;
+}
+
+.analytics-header .account-chip,
+.bank-account-chips .account-chip {
+    position: relative;
+    z-index: 9;
+    background: rgba(15, 23, 42, 0.95); /* make slightly more opaque */
+    box-shadow: 0 6px 18px rgba(2,6,23,0.35);
+}
+
+/* Prevent chips from being clipped by parent overflow on small containers */
+.analytics-container {
+    overflow: visible;
 }
 
 .analytics-header .account-chip:hover,
@@ -156,6 +180,25 @@
     color: #fff;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     margin: 0;
+    /* default: allow normal wrapping on wide screens */
+        white-space: normal;
+    line-height: 1.05;
+}
+
+/* Ensure the header title stays on a single line and doesn't push controls away */
+.analytics-header .analytics-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        max-width: 60%;
+}
+
+@media (max-width: 768px) {
+    /* in narrow layout keep title one-line but allow full width (will clip if too long) */
+    .analytics-header .analytics-title {
+        max-width: 100%;
+    }
 }
 
 .exchange-selector {
@@ -818,7 +861,11 @@
     color: #fff;
     font-size: 1.2rem;
     font-weight: 500;
-}
+        /* ensure loading content is pushed below fixed navbar and doesn't overflow viewport */
+        box-sizing: border-box;
+        padding-top: calc(var(--navbar-height, 88px) + 12px);
+        min-height: calc(100vh - var(--navbar-height, 88px));
+    }
 
 .spinner {
     width: 50px;
@@ -1302,7 +1349,10 @@
 
   .analytics-title {
     font-size: 1.3rem !important;
-    word-break: break-word;
+        word-break: normal !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
   }
 
   /* --- Селектор біржі: на всю ширину --- */

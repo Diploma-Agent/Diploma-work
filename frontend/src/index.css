@@ -9,6 +9,9 @@
   line-height: 1.5;
   font-weight: 400;
 
+  /* Global navbar height variable used by pages to offset fixed navbar */
+  --navbar-height: 88px;
+
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
   background-color: #020617;

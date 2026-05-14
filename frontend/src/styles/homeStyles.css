@@ -8,7 +8,8 @@
   justify-content: center;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
   overflow: hidden;
-  padding: 32px 16px;
+  /* offset page content below fixed navbar */
+  padding: calc(var(--navbar-height, 88px) + 16px) 16px 16px;
 }
 
 /* декоративні елементи */
@@ -227,4 +228,9 @@
   .home-btn {
     width: 100%;
   }
+}
+
+/* ensure top offset on narrow screens where navbar may become taller */
+@media (max-width: 520px) {
+  .home-wrapper { padding-top: calc(var(--navbar-height, 120px)); }
 }
