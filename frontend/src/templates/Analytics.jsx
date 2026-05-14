@@ -25,7 +25,7 @@ function Analytics() {
 
     // --- State для Банку ---
     const [banks, setBanks] = useState([]);
-    const [selectedBankIds, setSelectedBankIds] = useState([]); // [] = всі
+    const [selectedBankId, setSelectedBankId] = useState(null); // null = перший банк після завантаження
     const [bankAnalytics, setBankAnalytics] = useState(null);
     const [bankLoading, setBankLoading] = useState(false);
     const [forecastData, setForecastData] = useState(null);
@@ -108,7 +108,11 @@ function Analytics() {
                 .catch(() => setError('Не вдалося завантажити список бірж'));
 
             const fetchBanks = financeService.getBanks(token)
-                .then(list => setBanks(list || []))
+                .then(list => {
+                    const arr = list || [];
+                    setBanks(arr);
+                    if (arr.length > 0) setSelectedBankId(arr[0].id);
+                })
                 .catch(() => setBanks([]));
 
             setForecastLoading(true);
@@ -117,16 +121,16 @@ function Analytics() {
                 .catch(err => console.error('Помилка AI прогнозу:', err))
                 .finally(() => setForecastLoading(false));
 
-            await Promise.all([fetchExchanges, fetchBanks, loadBankDataForPeriod(selectedMonth, selectedYear, []), fetchForecast]);
+            await Promise.all([fetchExchanges, fetchBanks, fetchForecast]);
             setLoading(false);
         };
         initData();
     }, [navigate, loadBankDataForPeriod, selectedMonth, selectedYear]);
 
-    // 2. Перезавантаження банку при зміні місяця/року або вибраних банків
+    // 2. Перезавантаження банку при зміні місяця/року або вибраного банку
     useEffect(() => {
-        if (!loading) loadBankDataForPeriod(selectedMonth, selectedYear, selectedBankIds);
-    }, [loading, selectedMonth, selectedYear, selectedBankIds, loadBankDataForPeriod]);
+        if (!loading) loadBankDataForPeriod(selectedMonth, selectedYear, selectedBankId ? [selectedBankId] : []);
+    }, [loading, selectedMonth, selectedYear, selectedBankId, loadBankDataForPeriod]);
 
     // 2. Завантаження даних конкретної біржі при зміні вибору
     useEffect(() => {
@@ -426,10 +430,8 @@ function Analytics() {
                                     {banks.map(b => (
                                         <button
                                             key={b.id}
-                                            className={`account-chip ${selectedBankIds.includes(b.id) ? 'account-chip--active' : ''}`}
-                                            onClick={() => setSelectedBankIds(prev =>
-                                                prev.includes(b.id) ? prev.filter(x => x !== b.id) : [...prev, b.id]
-                                            )}
+                                            className={`account-chip ${selectedBankId === b.id ? 'account-chip--active' : ''}`}
+                                            onClick={() => setSelectedBankId(b.id)}
                                         >
                                             🏦 {b.name || b.bank_name}
                                         </button>
