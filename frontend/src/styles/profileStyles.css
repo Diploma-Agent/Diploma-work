@@ -741,11 +741,10 @@
 	color: #94a3b8;
 }
 
-.empty-hint {
+.bank-empty-hint {
 	font-size: 14px !important;
 	font-weight: 400 !important;
 	color: #64748b !important;
-	text-align: center;
 }
 
 .finish-setup-section {
