@@ -304,7 +304,7 @@ const TokensTab = () => {
                     <div className="empty-state">
                         <span className="empty-icon">🔑</span>
                         <p>Ще немає доданих API ключів</p>
-                        <p className="empty-hint">Додайте ключі бірж для відстеження балансів</p>
+                        <p className="profile-empty-hint">Додайте ключі бірж для відстеження балансів</p>
                     </div>
                 ) : (
                 <>

@@ -182,7 +182,7 @@ const BanksTab = ({
                     <div className="empty-state">
                         <span className="empty-icon">🏦</span>
                         <p>Ще немає підключених банків</p>
-                        <p className="bank-empty-hint">Додайте Monobank для автоматичної синхронізації транзакцій</p>
+                        <p className="profile-empty-hint">Додайте Monobank для автоматичної синхронізації транзакцій</p>
                     </div>
                 ) : banks.map(bank => (
                     <div key={bank.id} className="item-card">
