@@ -562,7 +562,7 @@ function Analytics() {
                                                         if (r2 >= 0.0) return { text: 'низька', cls: 'r2-low' };
                                                         return { text: 'нестабільна', cls: 'r2-low' };
                                                     };
-                                                    const r2Display = (r2) => r2 < 0 ? '< 0' : r2.toFixed(3);
+                                                    const r2Display = (r2) => r2 < -1 ? '< −1' : r2.toFixed(3);
 
                                                     if (totalWeeks < 8) {
                                                         return (
