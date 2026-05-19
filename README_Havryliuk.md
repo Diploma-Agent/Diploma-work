@@ -308,7 +308,7 @@ selectedBankId змінився
 
 > *(профіль ризику, розподіл портфелю, поради Gemini)*
 
-<img src="/screenshots_havryliuk/invesment.png width="500" />
+<img src="/screenshots_havryliuk/invesment.png" width="500" />
 
 ---
 
@@ -316,4 +316,4 @@ selectedBankId змінився
 
 > *(приклад розмови з Function Calling: запит курсу або аналізу фінансів)*
 
-<img src="/screenshots_havryliuk/AI-chat.png width="500" />
+<img src="/screenshots_havryliuk/AI-chat.png" width="500" />
