@@ -1,6 +1,6 @@
 # 💳 BanFin — AI-помічник для розумного фінансового планування
 
-> Веб-застосунок для автоматичного збору, аналізу та AI-прогнозування особистих фінансів з підтримкою банківських рахунків та криптовалютних бірж.
+> **Тема дипломної роботи:** Розробка AI-помічника для розумного фінансового планування
 
 ---
 
@@ -9,320 +9,228 @@
 - **ПІБ**: Гаврилюк Микола
 - **Група**: ФЕІ-44
 - **Керівник**: Гура Володимир, кандидат технічних наук, асистент
-- **Тема дипломної роботи**: Розробка AI-помічника для розумного фінансового планування
 
 ---
 
-## 📌 Загальна інформація
+## 🤖 AI-складова проєкту
 
-- **Тип проєкту**: Full-stack веб-застосунок (SPA + REST API)
-- **Мови програмування**: Python, JavaScript
-- **Frontend**: React 18 + Vite
-- **Backend**: Django 4.1 + Django REST Framework
-- **База даних**: MongoDB (через djongo + PyMongo)
-- **AI-модель**: Google Gemini (google-generativeai)
-- **Черга задач**: Celery + Redis
-- **Деплой**: Render.com (backend + frontend)
+Основою дипломної роботи є система з п'яти спеціалізованих AI-агентів, побудованих на базі **Google Gemini** (через Service Account Credentials). Кожен агент вирішує конкретну фінансову задачу і отримує реальні дані користувача з MongoDB.
+
+### Архітектура AI
+
+```
+frontend (React)
+    │
+    └─► REST API (Django)
+             │
+             ├─► ChatAgent           ← головний маршрутизатор
+             │       ├─► get_crypto_price()        (Function Call)
+             │       └─► analyze_user_finances()   (Function Call → FinancialAnalystAgent)
+             │
+             ├─► FinancialAnalystAgent
+             ├─► ForecastAgent
+             ├─► AnomalyDetectorAgent
+             └─► InvestmentAdvisorAgent
+```
+
+Базовий модуль `base.py` реалізує виклик Gemini з **Exponential Backoff** і автоматичним перемиканням між резервними моделями при перевищенні rate limit:
+
+```
+gemini-3-flash-preview → gemini-3.1-flash-lite-preview →
+gemini-2.5-flash → gemini-2.0-flash → gemini-2.0-flash-lite
+```
 
 ---
 
-## 🧠 Опис функціоналу
+## 🧠 Агент 1 — ChatAgent (AI Маршрутизатор)
 
-### 🔐 Авторизація
-- Реєстрація та вхід з JWT-токенами (djangorestframework-simplejwt)
-- Збереження профілю користувача
+**Файл:** `finance/services/agents/chat.py`
 
-### 🏦 Підключення банків
-- Інтеграція з **Monobank API** (токен доступу) — автоматичний імпорт транзакцій
-- Інтеграція з **ПУМБ** — через OAuth2
-- Підтримка кількох банківських підключень одночасно
-- Фонова синхронізація транзакцій через Celery
+**Призначення:** Головний чат-асистент з підтримкою **Function Calling** (AI Routing) — автоматично визначає тип запиту і делегує виконання відповідному інструменту.
 
-### 💹 Підключення криптобірж
-- Інтеграція з **Binance**, **Bybit**, **OKX** через API-ключі
-- Отримання балансів гаманців та відкритих ордерів (Spot / Futures)
-- Синхронізація крипто-транзакцій
+### Інструменти (Tools / Function Calling)
 
-### 📊 Аналітика
-- Дашборд із загальним балансом, доходами та витратами за місяць
-- Фільтрація по окремих банківських рахунках
-- Графік доходів і витрат по днях
-- Donut-діаграма розподілу витрат по категоріях
-- Вибір довільного місяця/року для аналізу
+| Інструмент | Коли викликається | Що робить |
+|---|---|---|
+| `get_crypto_price(symbol)` | Запит поточного курсу криптовалюти | Звертається до публічного Binance API |
+| `analyze_user_finances(days, date_from, date_to)` | Запит аналізу витрат/доходів за будь-який період | Делегує до `FinancialAnalystAgent` |
 
-### 🤖 AI-агенти (на базі Google Gemini)
+### Контекст що передається агенту
 
-| Агент | Призначення |
+- Банківський баланс, доходи та витрати за останні 30 днів
+- Список транзакцій (UAH, без переказів)
+- Виявлені аномальні витрати (якщо є)
+- **Реальний криптопортфель** з усіх підключених бірж (Binance / Bybit / OKX) — баланс кожної монети у USDT
+
+### Особливості реалізації
+
+- **Персистентна історія** — останні 10 повідомлень зберігаються в MongoDB і передаються при кожному запиті
+- **Два проходи через Gemini:** перший — визначення інструменту (Function Calling), другий — формування відповіді на основі результату
+- При запиті про **конкретний місяць** агент автоматично викликає `analyze_user_finances` з `date_from`/`date_to` і отримує дані напряму з MongoDB (PyMongo), минаючи Django ORM
+- Часовий пояс Kyiv (Europe/Kiev) при парсингу дат → конвертація в UTC перед запитом до MongoDB
+
+---
+
+## 📊 Агент 2 — FinancialAnalystAgent
+
+**Файл:** `finance/services/agents/financial_analyst.py`
+
+**Призначення:** Детальний аналіз фінансового стану за вибраний період.
+
+### Власна аналітика (без LLM)
+
+Перед викликом Gemini агент самостійно розраховує:
+
+**Топ-7 категорій витрат** — групування за полем `counterparty` або першим рядком `description`:
+```python
+def _category_breakdown(transactions) → list[tuple[str, float]]
+```
+
+**Бюджетний Health Score (0–100)** — три складові:
+
+| Складова | Макс. балів | Логіка |
+|---|---|---|
+| Норма заощадження | 50 | ≥25% → 50 балів, ≥15% → 35, ≥5% → 20 |
+| Покриття витрат доходами | 30 | income/expense ≥1.5 → 30, ≥1.2 → 20 |
+| Достатність даних | 20 | ≥30 транзакцій → 20, ≥10 → 10 |
+
+**Мітки:** Відмінний (≥75) / Хороший (≥50) / Задовільний (≥30) / Потребує уваги
+
+### Що передається до Gemini
+
+```
+Доходи / Витрати / Баланс / Норма заощадження / Health Score
+Топ-5 витратних категорій з відсотками
+Розбивка за категоріями (топ-7)
+Питання користувача (або загальний аналіз за замовчуванням)
+```
+
+---
+
+## 🔮 Агент 3 — ForecastAgent (AI Регресія)
+
+**Файл:** `finance/services/agents/forecast.py`
+
+**Призначення:** Прогноз доходів і витрат на N днів методом **лінійної регресії (МНК)**.
+
+### Алгоритм
+
+**1. Тижнева агрегація витрат** — підсумовування витрат по ISO-тижнях.
+
+**2. Автовибір агрегації для доходів:**
+- Якщо > 45% тижнів мають ненульовий дохід → **тижнева агрегація** (рівномірні надходження)
+- Якщо ≤ 45% → **місячна агрегація** (зарплата 1–2 рази на місяць), конвертація у тижневі коефіцієнти через `WEEKS_PER_MONTH = 4.345`
+
+**3. МНК лінійна регресія:**
+```
+slope = (n·Σxy − Σx·Σy) / (n·Σx² − (Σx)²)
+intercept = (Σy − slope·Σx) / n
+```
+
+**4. Train/Test split 75/25** для оцінки точності:
+- **RMSE** (Root Mean Square Error)
+- **MAE** (Mean Absolute Error)
+- **R²** (коефіцієнт детермінації на тестовій вибірці)
+
+**5. Прогноз:**
+```
+pred = intercept + slope * future_week_idx
+forecast = pred * (days / 7)
+```
+
+### Відображення точності
+
+| Тижнів даних | R² | Відображення |
+|---|---|---|
+| < 8 | будь-який | ⚠️ Попередження про недостатність даних |
+| ≥ 8 | ≥ 0.7 | Висока точність |
+| ≥ 8 | ≥ 0.4 | Задовільна |
+| ≥ 8 | 0..0.4 | Низька |
+| ≥ 8 | < 0 | Нестабільна (показується `< −1` якщо значення екстремальне) |
+
+Дані для регресії беруться з MongoDB за **180 днів** (6 місяців) з фільтрацією по `connection_id` конкретного банку.
+
+---
+
+## 🚨 Агент 4 — AnomalyDetectorAgent
+
+**Файл:** `finance/services/agents/anomaly_detector.py`
+
+**Призначення:** Виявлення підозрілих транзакцій методом **робастної статистики (MAD)**.
+
+### Алгоритм (MAD — Median Absolute Deviation)
+
+Замість класичного `Mean ± 2·StdDev` (чутливого до викидів) використовується:
+
+```
+median_amount = медіана всіх витрат
+MAD = медіана(|x_i − median_amount|)
+threshold = max(median + 3·MAD, median · 2.5)
+anomalous = [t for t in expenses if t.amount > threshold]
+```
+
+**Чому MAD, а не StdDev?** Фінансові дані мають "важкий хвіст" — одна велика покупка (наприклад, техніка) значно завищує середнє і стандартне відхилення, що робить StdDev ненадійним порогом.
+
+### Що передається до Gemini
+
+```
+Медіанна витрата, MAD, обчислений поріг
+Список аномальних транзакцій (до 5 шт.) з описом, сумою і датою
+```
+
+Gemini аналізує: чи це велика покупка, можливе шахрайство чи підписка.
+
+**Інтеграція з ChatAgent:** результати детектора аномалій додаються до контексту кожного повідомлення чату — якщо знайдено підозрілі транзакції, Gemini може згадати про них у відповіді.
+
+---
+
+## 💼 Агент 5 — InvestmentAdvisorAgent
+
+**Файл:** `finance/services/agents/investment_advisor.py`
+
+**Призначення:** Персоналізовані інвестиційні поради з автоматичною побудовою портфелю.
+
+### Профіль ризику (Risk Score 0–100)
+
+| Складова | Макс. балів | Логіка |
+|---|---|---|
+| Норма заощадження | 40 | ≥30% → 40, ≥20% → 30, ≥10% → 20 |
+| Резервний фонд | 30 | ≥ 2×(витрати·3 місяці) → 30 |
+| Стабільність (income/expense) | 30 | ratio ≥1.5 → 30, ≥1.2 → 20 |
+
+**Рівні:** Агресивний (≥70) / Помірний (≥40) / Консервативний (<40)
+
+### Розподіл портфелю
+
+| Рівень ризику | Розподіл |
 |---|---|
-| **ChatAgent** | Загальний фінансовий чат-асистент з Function Calling (AI Routing) |
-| **FinancialAnalystAgent** | Аналіз доходів, витрат та транзакцій за будь-який період |
-| **ForecastAgent** | Прогноз доходів і витрат на 30 днів методом лінійної регресії (МНК) |
-| **AnomalyDetectorAgent** | Виявлення підозрілих та аномальних транзакцій |
-| **InvestmentAdvisorAgent** | Поради щодо інвестицій на основі поточного балансу |
+| Консервативний | 60% Депозит/ОВДП, 30% Золото/USD, 10% USDT |
+| Помірний | 40% Депозит, 30% ETF/S&P 500, 20% BTC/ETH, 10% Золото |
+| Агресивний | 20% Депозит, 30% Акції/ETF, 35% BTC/ETH, 15% Альткоїни/DeFi |
 
-**Особливості AI-чату:**
-- Персистентна історія повідомлень у MongoDB
-- Function Calling (AI Router): автоматичне делегування між агентами
-- Доступ до реальних даних бірж (портфель у USDT по кожній монеті)
-- Підтримка запитів за будь-який часовий діапазон
-
-### 💬 Транзакції
-- Перегляд та фільтрація транзакцій (по джерелу, типу, даті, акаунту)
-- Ручне додавання транзакцій
-- Підтримка типів: дохід, витрата, переказ
+Перед розподілом автоматично резервується частина заощаджень на поповнення **резервного фонду** (3 місяці витрат), якщо він не сформований. Агент також враховує **криптопортфель** з підключених бірж.
 
 ---
 
-## 🧱 Структура проєкту
+## 🔌 AI API ендпоінти
 
-```
-Diploma-work/
-├── backend/
-│   ├── authentication/          # Реєстрація, вхід, профіль
-│   │   ├── models.py            # UserProfile
-│   │   ├── views.py             # RegisterView, LoginView, GetMeView
-│   │   └── serializers.py
-│   ├── finance/
-│   │   ├── models.py            # BankConnection, CryptoExchange, Transaction, ChatMessage
-│   │   ├── views.py             # Всі API-ендпоінти
-│   │   ├── tasks.py             # Celery-задачі синхронізації
-│   │   └── services/
-│   │       ├── monobank.py      # Monobank API інтеграція
-│   │       ├── pumb.py          # ПУМБ OAuth2
-│   │       ├── binance.py       # Binance API
-│   │       ├── bybit.py         # Bybit API
-│   │       ├── okx.py           # OKX API
-│   │       └── agents/
-│   │           ├── base.py               # Базовий виклик Gemini з retry
-│   │           ├── chat.py               # ChatAgent (Function Calling)
-│   │           ├── financial_analyst.py  # FinancialAnalystAgent
-│   │           ├── forecast.py           # ForecastAgent (МНК регресія)
-│   │           ├── anomaly_detector.py   # AnomalyDetectorAgent
-│   │           └── investment_advisor.py # InvestmentAdvisorAgent
-│   ├── config/
-│   │   ├── settings.py          # Налаштування Django
-│   │   └── celery.py            # Celery конфігурація
-│   └── requirements.txt
-└── frontend/
-    └── src/
-        ├── templates/
-        │   ├── Dashboard.jsx    # Головна сторінка з балансом і транзакціями
-        │   ├── Analytics.jsx    # Аналітика банку та біржі
-        │   ├── Transactions.jsx # Список транзакцій з фільтрами
-        │   └── Profile.jsx      # Управління підключеннями
-        ├── components/
-        │   ├── ChatComponent.jsx       # AI чат-вікно
-        │   ├── Navbar.jsx              # Навігація
-        │   └── profile/
-        │       ├── BanksTab.jsx        # Підключення банків
-        │       └── TokensTab.jsx       # Підключення бірж
-        ├── context/
-        │   ├── FinanceContext.jsx      # Контекст + хук useFinance
-        │   └── FinanceProvider.jsx     # Кеш-провайдер (TTL 5 хв)
-        └── api/
-            ├── financeService.js       # Всі запити до finance API
-            └── authService.js          # Запити авторизації
-```
-
----
-
-## ▶️ Як запустити проєкт локально
-
-### 1. Потрібні інструменти
-
-- Python 3.11+
-- Node.js 18+ та npm
-- MongoDB (локально або Atlas)
-- Redis (для Celery)
-
-### 2. Клонування репозиторію
-
-```bash
-git clone https://github.com/Diploma-Agent/Diploma-work.git
-cd Diploma-work
-```
-
-### 3. Налаштування Backend
-
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-Створіть файл `.env` у папці `backend/`:
-
-```env
-SECRET_KEY=your-django-secret-key
-DEBUG=True
-MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/
-MONGODB_DATABASE=banfin
-GEMINI_API_KEY=your-gemini-api-key
-REDIS_URL=redis://localhost:6379/0
-CELERY_BROKER_URL=redis://localhost:6379/0
-CELERY_RESULT_BACKEND=redis://localhost:6379/0
-CORS_ALLOWED_ORIGINS=http://localhost:5173
-ENCRYPTION_KEY=your-fernet-encryption-key
-```
-
-Запуск сервера:
-
-```bash
-python manage.py migrate
-python manage.py runserver
-```
-
-Запуск Celery (в окремому терміналі):
-
-```bash
-celery -A config worker --loglevel=info
-```
-
-### 4. Налаштування Frontend
-
-```bash
-cd frontend
-npm install --legacy-peer-deps
-```
-
-Створіть файл `.env` у папці `frontend/`:
-
-```env
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-Запуск:
-
-```bash
-npm run dev
-```
-
-Відкрийте [http://localhost:5173](http://localhost:5173)
-
----
-
-## 🔌 Основні API-ендпоінти
-
-### 🔐 Авторизація
-
-| Метод | URL | Опис |
+| Метод | URL | Агент |
 |---|---|---|
-| POST | `/api/auth/register/` | Реєстрація |
-| POST | `/api/auth/login/` | Вхід (отримання JWT) |
-| GET | `/api/auth/me/` | Профіль поточного користувача |
-
-### 🏦 Банки
-
-| Метод | URL | Опис |
-|---|---|---|
-| GET | `/api/finance/banks/` | Список підключених банків |
-| POST | `/api/finance/banks/add/` | Додати банк |
-| DELETE | `/api/finance/banks/{id}/delete/` | Видалити банк |
-| GET | `/api/finance/analytics/bank/?connection_id=` | Баланс конкретного банку |
-
-### 💹 Біржі
-
-| Метод | URL | Опис |
-|---|---|---|
-| GET | `/api/finance/exchanges/` | Список підключених бірж |
-| POST | `/api/finance/exchanges/add/` | Додати біржу |
-| DELETE | `/api/finance/exchanges/{id}/delete/` | Видалити біржу |
-| GET | `/api/finance/exchanges/balance/?exchange=binance` | Баланс біржі |
-| GET | `/api/finance/exchanges/orders/?exchange=bybit` | Відкриті ордери |
-
-### 📋 Транзакції
-
-| Метод | URL | Опис |
-|---|---|---|
-| GET | `/api/finance/transactions/?days=30` | Список транзакцій |
-| POST | `/api/finance/transactions/sync/` | Синхронізація з банком/біржею |
-
-### 🤖 AI
-
-| Метод | URL | Опис |
-|---|---|---|
-| POST | `/api/finance/ai/chat/` | Чат з AI-асистентом |
-| GET | `/api/finance/ai/chat/history/` | Історія чату |
-| DELETE | `/api/finance/ai/chat/history/` | Очистити історію |
-| POST | `/api/finance/ai/analyst/` | Фінансовий аналіз |
-| GET | `/api/finance/ai/forecast/?days=30&connection_id=` | Прогноз на N днів |
-| GET | `/api/finance/ai/anomaly/` | Виявлення аномалій |
-| GET | `/api/finance/ai/investment/` | Інвестиційні поради |
+| POST | `/api/finance/ai/chat/` | ChatAgent |
+| GET | `/api/finance/ai/chat/history/` | — (MongoDB) |
+| DELETE | `/api/finance/ai/chat/history/` | — |
+| POST | `/api/finance/ai/analyst/` | FinancialAnalystAgent |
+| GET | `/api/finance/ai/forecast/?days=30&connection_id=` | ForecastAgent |
+| GET | `/api/finance/ai/anomaly/` | AnomalyDetectorAgent |
+| GET | `/api/finance/ai/investment/` | InvestmentAdvisorAgent |
 
 ---
 
-## 🖱️ Інструкція для користувача
+## 🛠️ Технічні деталі реалізації
 
-1. **Реєстрація / Вхід** — створіть акаунт або увійдіть у систему
-
-2. **Підключення банку** (Профіль → Банки):
-   - Отримайте токен у застосунку Monobank: Налаштування → Особистий токен
-   - Вставте токен і вкажіть назву підключення
-   - Транзакції за останні 2 місяці синхронізуються автоматично у фоні
-
-3. **Підключення біржі** (Профіль → Токени бірж):
-   - Створіть API-ключ у Binance / Bybit / OKX
-   - Вставте API Key та Secret (для OKX — ще й Passphrase)
-
-4. **Дашборд** — загальний огляд балансу, доходів і витрат, фільтрація по банку
-
-5. **Аналітика**:
-   - Вибір банку (чіп) та місяця → оновлення всіх віджетів
-   - AI-прогноз на 30 днів методом лінійної регресії (МНК)
-   - Розподіл витрат по категоріях (donut-діаграма)
-   - Баланс та ордери криптобіржі
-
-6. **AI-чат** — запитайте про ваші фінанси природною мовою:
-   - *"Скільки я витратив цього місяця?"*
-   - *"Проаналізуй мої витрати за березень"*
-   - *"Яка ціна Bitcoin зараз?"*
-   - *"Скільки монет у мене на Binance?"*
-
----
-
-## 🧪 Відомі проблеми та рішення
-
-| Проблема | Рішення |
-|---|---|
-| `npm install` падає з помилкою peer deps | `npm install --legacy-peer-deps` |
-| Monobank повертає 429 Too Many Requests | Токен має ліміт 1 запит/60 сек — це нормально, дані кешуються в Redis |
-| Celery не запускається на Windows | `celery -A config worker --pool=solo --loglevel=info` |
-| `No module named 'whitenoise'` | `pip install -r requirements.txt` |
-| CORS помилка при локальному запуску | Перевірте `CORS_ALLOWED_ORIGINS` у `.env` backend |
-
----
-
-## 🧾 Використані технології та джерела
-
-**Backend:**
-- [Django](https://docs.djangoproject.com/) — основний веб-фреймворк
-- [Django REST Framework](https://www.django-rest-framework.org/) — побудова REST API
-- [djongo + PyMongo](https://www.djongomapper.com/) — ORM-адаптер для MongoDB
-- [Celery](https://docs.celeryq.dev/) — фонові задачі та планувальник синхронізації
-- [Google Generative AI (Gemini)](https://ai.google.dev/) — AI-агенти
-- [Simple JWT](https://django-rest-framework-simplejwt.readthedocs.io/) — JWT авторизація
-- [drf-yasg](https://drf-yasg.readthedocs.io/) — Swagger документація API
-
-**Frontend:**
-- [React 18](https://react.dev/) — UI-бібліотека
-- [Vite](https://vitejs.dev/) — збірка та dev-сервер
-- [Recharts](https://recharts.org/) — інтерактивні графіки
-- [React Router v6](https://reactrouter.com/) — клієнтська маршрутизація
-
-**Зовнішні API:**
-- [Monobank API](https://api.monobank.ua/) — банківські транзакції та баланс
-- [Binance API](https://binance-docs.github.io/apidocs/) — крипто-баланси
-- [Bybit API](https://bybit-exchange.github.io/docs/) — гаманець та ордери
-- [OKX API](https://www.okx.com/docs-v5/) — крипто-портфель
-
----
-
-## 📷 Скриншоти
-
-> Додайте зображення у папку `/screenshots/`
-
-- Дашборд — загальний огляд фінансів
-- Аналітика банку — графік, прогноз, розподіл витрат
-- Аналітика біржі — баланс монет, ордери
-- AI-чат — відповіді на фінансові запити
-- Сторінка транзакцій з фільтрами
-- Профіль — підключення банків і бірж
+- **LLM:** Google Gemini (Service Account Auth, не API Key)
+- **Бібліотека:** `google-generativeai`
+- **Retry-стратегія:** Exponential Backoff (1s → 2s → 4s) з перебором 5 резервних моделей
+- **Кешування прогнозів:** Redis (ключ = MD5 від `user_id + days + connection_id + хеш транзакцій`)
+- **Джерело даних для AI:** MongoDB напряму через PyMongo — уникнення рекурсії в djongo при складних фільтрах
+- **Часовий пояс:** Europe/Kiev → UTC конвертація для точного визначення меж доби при запитах по даті
