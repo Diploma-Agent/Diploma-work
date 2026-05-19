@@ -175,14 +175,15 @@ chmod +x start.sh
 ## 📷 Приклади / скриншоти
 
 ### Головна сторінка (Дашборд)
-![Дашборд](./screenshots/vovk/dashboard.png)
+<img src="./screenshots/vovk/dashboard.png" alt="Дашборд" width="500" />
 
 ### Графіки (Аналітика)
-![Аналітика графіка](./screenshots/vovk/analytics_graph.png)
-![Аналітика](./screenshots/vovk/analytics.png)
+<img src="./screenshots/vovk/analytics_graph.png" alt="Аналітика графіка" width="500" />
+<br><br>
+<img src="./screenshots/vovk/analytics.png" alt="Аналітика" width="500" />
 
 ### Форма підключення банку (Профіль)
-![Додавання банку](./screenshots/vovk/bank_add.png)
+<img src="./screenshots/vovk/bank_add.png" alt="Додавання банку" width="500" />
 
 ---
 
