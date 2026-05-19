@@ -1517,8 +1517,58 @@
     color: #cbd5e1;
     line-height: 1.65;
     margin-top: 16px;
-    white-space: pre-wrap;
 }
+
+/* Markdown renderer стилі */
+.md-body { display: flex; flex-direction: column; gap: 6px; }
+
+.md-h1 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 12px 0 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.md-h2 {
+    font-size: 0.97rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin: 10px 0 3px;
+}
+.md-h3 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #cbd5e1;
+    margin: 8px 0 2px;
+    letter-spacing: 0.01em;
+}
+
+.md-p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.87rem;
+    line-height: 1.65;
+}
+
+.md-list {
+    margin: 4px 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.md-list li {
+    color: #94a3b8;
+    font-size: 0.87rem;
+    line-height: 1.6;
+    padding-left: 2px;
+}
+.md-list strong { color: #e2e8f0; font-weight: 600; }
+.md-list em { color: #a5b4fc; font-style: normal; }
+.md-p strong { color: #e2e8f0; font-weight: 600; }
+.md-p em { color: #a5b4fc; font-style: normal; }
+.md-h3 strong { color: #f1f5f9; }
 
 /* Health Score */
 .health-score-row {
