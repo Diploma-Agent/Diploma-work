@@ -14,6 +14,81 @@ function renderForecastText(text) {
         .trim();
 }
 
+// Парсинг inline-розмітки: **bold**, *italic*
+function parseInline(text, keyPrefix = '') {
+    const parts = [];
+    const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
+    let last = 0;
+    let m;
+    while ((m = regex.exec(text)) !== null) {
+        if (m.index > last) parts.push(text.slice(last, m.index));
+        if (m[1] !== undefined) parts.push(<strong key={keyPrefix + m.index}>{m[1]}</strong>);
+        else parts.push(<em key={keyPrefix + m.index}>{m[2]}</em>);
+        last = regex.lastIndex;
+    }
+    if (last < text.length) parts.push(text.slice(last));
+    return parts;
+}
+
+// Повний markdown → JSX рендер для текстів Gemini
+function renderMarkdown(text) {
+    if (!text) return null;
+    const lines = text.split('\n');
+    const elements = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+
+        // Заголовки
+        if (/^###\s+/.test(line)) {
+            elements.push(<h4 key={i} className="md-h3">{parseInline(line.replace(/^###\s+/, ''), `h${i}`)}</h4>);
+            i++; continue;
+        }
+        if (/^##\s+/.test(line)) {
+            elements.push(<h3 key={i} className="md-h2">{parseInline(line.replace(/^##\s+/, ''), `h${i}`)}</h3>);
+            i++; continue;
+        }
+        if (/^#\s+/.test(line)) {
+            elements.push(<h2 key={i} className="md-h1">{parseInline(line.replace(/^#\s+/, ''), `h${i}`)}</h2>);
+            i++; continue;
+        }
+
+        // Нумерований список
+        if (/^\d+\.\s+/.test(line)) {
+            const items = [];
+            while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
+                items.push(<li key={i}>{parseInline(lines[i].replace(/^\d+\.\s+/, ''), `ol${i}`)}</li>);
+                i++;
+            }
+            elements.push(<ol key={`ol${i}`} className="md-list">{items}</ol>);
+            continue;
+        }
+
+        // Маркований список (* або -)
+        if (/^[\*\-]\s+/.test(line)) {
+            const items = [];
+            while (i < lines.length && /^[\*\-]\s+/.test(lines[i])) {
+                items.push(<li key={i}>{parseInline(lines[i].replace(/^[\*\-]\s+/, ''), `ul${i}`)}</li>);
+                i++;
+            }
+            elements.push(<ul key={`ul${i}`} className="md-list">{items}</ul>);
+            continue;
+        }
+
+        // Порожній рядок — відступ між абзацами
+        if (line.trim() === '') {
+            i++; continue;
+        }
+
+        // Звичайний абзац
+        elements.push(<p key={i} className="md-p">{parseInline(line, `p${i}`)}</p>);
+        i++;
+    }
+
+    return <div className="md-body">{elements}</div>;
+}
+
 function Analytics() {
     // --- State для Біржі ---
     const [exchanges, setExchanges] = useState([]);
@@ -799,11 +874,11 @@ function Analytics() {
                                                 )}
                                                 {/* Текст Gemini */}
                                                 {analystData.analysis && (
-                                                    <div className="ai-agent-text">{analystData.analysis}</div>
+                                                    <div className="ai-agent-text">{renderMarkdown(analystData.analysis)}</div>
                                                 )}
                                             </>
                                         ) : analystData?.analysis ? (
-                                            <div className="ai-agent-text">{analystData.analysis}</div>
+                                            <div className="ai-agent-text">{renderMarkdown(analystData.analysis)}</div>
                                         ) : null}
                                     </div>
 
@@ -837,7 +912,7 @@ function Analytics() {
                                                     </div>
                                                 )}
                                                 {anomalyData.anomalies && (
-                                                    <div className="ai-agent-text">{anomalyData.anomalies}</div>
+                                                    <div className="ai-agent-text">{renderMarkdown(anomalyData.anomalies)}</div>
                                                 )}
                                             </>
                                         ) : null}
@@ -890,7 +965,7 @@ function Analytics() {
                                             {/* Права колонка — текст Gemini */}
                                             {investmentData.advice && (
                                                 <div className="investment-advice">
-                                                    <div className="ai-agent-text">{investmentData.advice}</div>
+                                                    <div className="ai-agent-text">{renderMarkdown(investmentData.advice)}</div>
                                                 </div>
                                             )}
                                         </div>
