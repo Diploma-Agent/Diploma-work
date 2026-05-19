@@ -1473,3 +1473,174 @@
   .recommendation-btn { width: 100%; }
   .recommendation-item { flex-direction: column; gap: 8px; }
 }
+
+/* ── AI Agents Grid ── */
+.ai-agents-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 35px;
+}
+
+@media (max-width: 900px) {
+    .ai-agents-grid { grid-template-columns: 1fr; }
+}
+
+.ai-agent-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    border-radius: 20px;
+    padding: 28px;
+}
+
+.ai-agent-card--full {
+    grid-column: 1 / -1;
+}
+
+.ai-agent-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.ai-agent-icon { font-size: 2rem; }
+
+.ai-agent-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0 0 4px;
+}
+
+.ai-agent-text {
+    font-size: 0.88rem;
+    color: #cbd5e1;
+    line-height: 1.65;
+    margin-top: 16px;
+    white-space: pre-wrap;
+}
+
+/* Health Score */
+.health-score-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 16px;
+}
+
+.health-score-circle {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    padding: 10px 18px;
+    border-radius: 14px;
+    font-weight: 800;
+}
+
+.health-score-circle.health-high  { background: rgba(74,222,128,0.15); border: 2px solid #4ade80; }
+.health-score-circle.health-mid   { background: rgba(251,191,36,0.15);  border: 2px solid #fbbf24; }
+.health-score-circle.health-low   { background: rgba(251,146,60,0.15);  border: 2px solid #fb923c; }
+.health-score-circle.health-critical { background: rgba(248,113,113,0.15); border: 2px solid #f87171; }
+
+.health-score-num  { font-size: 1.8rem; color: #f1f5f9; }
+.health-score-max  { font-size: 0.85rem; color: #94a3b8; }
+.health-score-label { font-size: 1rem; font-weight: 700; color: #f1f5f9; }
+.health-score-sub   { font-size: 0.8rem; color: #94a3b8; margin-top: 4px; }
+
+/* Analyst categories */
+.analyst-categories { display: flex; flex-direction: column; gap: 8px; }
+.analyst-cat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+}
+.analyst-cat-name { min-width: 120px; color: #cbd5e1; }
+.analyst-cat-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.analyst-cat-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #a78bfa);
+    border-radius: 3px;
+    transition: width 0.6s ease;
+}
+.analyst-cat-pct { min-width: 38px; text-align: right; color: #94a3b8; }
+
+/* Anomaly */
+.anomaly-count-badge {
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+}
+.anomaly-found { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); color: #fca5a5; }
+.anomaly-clean { background: rgba(74,222,128,0.12);  border: 1px solid rgba(74,222,128,0.3);  color: #86efac; }
+
+.anomaly-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.anomaly-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(248,113,113,0.07);
+    border-radius: 8px;
+    font-size: 0.82rem;
+}
+.anomaly-desc  { flex: 1; color: #cbd5e1; }
+.anomaly-amount { color: #fca5a5; font-weight: 600; margin: 0 10px; }
+.anomaly-date   { color: #64748b; }
+
+/* Investment */
+.investment-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 30px;
+}
+@media (max-width: 900px) {
+    .investment-layout { grid-template-columns: 1fr; }
+}
+
+.risk-profile { margin-bottom: 20px; }
+.risk-label  { font-size: 0.78rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+.risk-badge  {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.risk-badge.risk-conservative { background: rgba(74,222,128,0.15);  color: #4ade80;  border: 1px solid #4ade80; }
+.risk-badge.risk-moderate     { background: rgba(251,191,36,0.15);   color: #fbbf24;  border: 1px solid #fbbf24; }
+.risk-badge.risk-aggressive   { background: rgba(248,113,113,0.15);  color: #f87171;  border: 1px solid #f87171; }
+
+.risk-score, .risk-meta { font-size: 0.82rem; color: #94a3b8; margin-bottom: 4px; }
+.risk-emergency { font-size: 0.82rem; margin-top: 8px; }
+.risk-emergency.covered     { color: #86efac; }
+.risk-emergency.not-covered { color: #fca5a5; }
+
+.portfolio-title { font-size: 0.82rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+.portfolio-allocations { display: flex; flex-direction: column; gap: 8px; }
+.allocation-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    font-size: 0.82rem;
+}
+.allocation-name   { flex: 1; color: #cbd5e1; }
+.allocation-amount { color: #a78bfa; font-weight: 600; }
+.allocation-pct    { color: #64748b; min-width: 36px; text-align: right; }
+
+.investment-advice {
+    border-left: 2px solid rgba(102,126,234,0.3);
+    padding-left: 24px;
+}

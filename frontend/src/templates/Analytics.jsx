@@ -30,6 +30,12 @@ function Analytics() {
     const [bankLoading, setBankLoading] = useState(false);
     const [forecastData, setForecastData] = useState(null);
     const [forecastLoading, setForecastLoading] = useState(false);
+    const [analystData, setAnalystData] = useState(null);
+    const [analystLoading, setAnalystLoading] = useState(false);
+    const [anomalyData, setAnomalyData] = useState(null);
+    const [anomalyLoading, setAnomalyLoading] = useState(false);
+    const [investmentData, setInvestmentData] = useState(null);
+    const [investmentLoading, setInvestmentLoading] = useState(false);
 
     // --- Вибір місяця/року ---
     const now = new Date();
@@ -136,6 +142,31 @@ function Analytics() {
             .then(data => setForecastData(data))
             .catch(err => console.error('Помилка AI прогнозу:', err))
             .finally(() => setForecastLoading(false));
+    }, [selectedBankId]);
+
+    // 4. AI агенти — перезавантажуємо при зміні вибраного банку
+    useEffect(() => {
+        if (!selectedBankId) return;
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        setAnalystLoading(true);
+        financeService.aiAnalyst(token, null, selectedBankId)
+            .then(data => setAnalystData(data))
+            .catch(err => console.error('Помилка AI аналітика:', err))
+            .finally(() => setAnalystLoading(false));
+
+        setAnomalyLoading(true);
+        financeService.aiAnomaly(token, selectedBankId)
+            .then(data => setAnomalyData(data))
+            .catch(err => console.error('Помилка AI аномалій:', err))
+            .finally(() => setAnomalyLoading(false));
+
+        setInvestmentLoading(true);
+        financeService.aiInvestment(token, selectedBankId)
+            .then(data => setInvestmentData(data))
+            .catch(err => console.error('Помилка AI інвестицій:', err))
+            .finally(() => setInvestmentLoading(false));
     }, [selectedBankId]);
 
     // 2. Завантаження даних конкретної біржі при зміні вибору
@@ -721,6 +752,150 @@ function Analytics() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* AI Аналіз бюджету */}
+                                <div className="ai-agents-grid" style={{ marginBottom: '35px' }}>
+                                    <div className="ai-agent-card">
+                                        <div className="ai-agent-header">
+                                            <span className="ai-agent-icon">📊</span>
+                                            <div>
+                                                <h3 className="ai-agent-title">AI Аналіз бюджету</h3>
+                                                <span className="agent-badge">Фінансовий Аналітик</span>
+                                            </div>
+                                        </div>
+                                        {analystLoading ? (
+                                            <div className="ai-loading"><div className="spinner-sm" /> Аналізую фінанси...</div>
+                                        ) : analystData?.data ? (
+                                            <>
+                                                {/* Health Score */}
+                                                <div className="health-score-row">
+                                                    <div className={`health-score-circle ${
+                                                        analystData.data.health_score >= 75 ? 'health-high'
+                                                        : analystData.data.health_score >= 50 ? 'health-mid'
+                                                        : analystData.data.health_score >= 30 ? 'health-low'
+                                                        : 'health-critical'
+                                                    }`}>
+                                                        <span className="health-score-num">{analystData.data.health_score}</span>
+                                                        <span className="health-score-max">/100</span>
+                                                    </div>
+                                                    <div className="health-score-info">
+                                                        <div className="health-score-label">{analystData.data.health_label}</div>
+                                                        <div className="health-score-sub">Норма заощаджень: {analystData.data.savings_rate}%</div>
+                                                    </div>
+                                                </div>
+                                                {/* Категорії */}
+                                                {analystData.data.categories?.length > 0 && (
+                                                    <div className="analyst-categories">
+                                                        {analystData.data.categories.slice(0, 5).map((cat, i) => (
+                                                            <div key={i} className="analyst-cat-row">
+                                                                <span className="analyst-cat-name">{cat.name.length > 22 ? cat.name.slice(0,22)+'…' : cat.name}</span>
+                                                                <div className="analyst-cat-bar-wrap">
+                                                                    <div className="analyst-cat-bar" style={{ width: `${Math.min(cat.percent, 100)}%` }} />
+                                                                </div>
+                                                                <span className="analyst-cat-pct">{cat.percent}%</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {/* Текст Gemini */}
+                                                {analystData.analysis && (
+                                                    <div className="ai-agent-text">{analystData.analysis}</div>
+                                                )}
+                                            </>
+                                        ) : analystData?.analysis ? (
+                                            <div className="ai-agent-text">{analystData.analysis}</div>
+                                        ) : null}
+                                    </div>
+
+                                    {/* AI Аномалії */}
+                                    <div className="ai-agent-card">
+                                        <div className="ai-agent-header">
+                                            <span className="ai-agent-icon">🚨</span>
+                                            <div>
+                                                <h3 className="ai-agent-title">AI Аномалії</h3>
+                                                <span className="agent-badge">Детектор Аномалій</span>
+                                            </div>
+                                        </div>
+                                        {anomalyLoading ? (
+                                            <div className="ai-loading"><div className="spinner-sm" /> Шукаю аномалії...</div>
+                                        ) : anomalyData ? (
+                                            <>
+                                                <div className={`anomaly-count-badge ${anomalyData.anomaly_count > 0 ? 'anomaly-found' : 'anomaly-clean'}`}>
+                                                    {anomalyData.anomaly_count > 0
+                                                        ? `⚠️ Знайдено ${anomalyData.anomaly_count} підозрілих транзакцій`
+                                                        : '✅ Підозрілих транзакцій не знайдено'}
+                                                </div>
+                                                {anomalyData.anomalous_transactions?.length > 0 && (
+                                                    <div className="anomaly-list">
+                                                        {anomalyData.anomalous_transactions.map((tx, i) => (
+                                                            <div key={i} className="anomaly-item">
+                                                                <span className="anomaly-desc">{tx.description?.slice(0,30) || 'Транзакція'}</span>
+                                                                <span className="anomaly-amount">{tx.amount?.toLocaleString('uk-UA')} ₴</span>
+                                                                <span className="anomaly-date">{tx.date}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {anomalyData.anomalies && (
+                                                    <div className="ai-agent-text">{anomalyData.anomalies}</div>
+                                                )}
+                                            </>
+                                        ) : null}
+                                    </div>
+                                </div>
+
+                                {/* AI Інвестиційний Радник */}
+                                <div className="ai-agent-card ai-agent-card--full" style={{ marginBottom: '35px' }}>
+                                    <div className="ai-agent-header">
+                                        <span className="ai-agent-icon">💼</span>
+                                        <div>
+                                            <h3 className="ai-agent-title">AI Інвестиційний Радник</h3>
+                                            <span className="agent-badge">Інвестиційний Радник</span>
+                                        </div>
+                                    </div>
+                                    {investmentLoading ? (
+                                        <div className="ai-loading"><div className="spinner-sm" /> Формую інвестиційний план...</div>
+                                    ) : investmentData ? (
+                                        <div className="investment-layout">
+                                            {/* Ліва колонка — профіль ризику + портфель */}
+                                            <div className="investment-left">
+                                                {investmentData.risk_profile && (
+                                                    <div className="risk-profile">
+                                                        <div className="risk-label">Профіль ризику</div>
+                                                        <div className={`risk-badge risk-${investmentData.risk_profile.level}`}>
+                                                            {investmentData.risk_profile.label}
+                                                        </div>
+                                                        <div className="risk-score">Скор: {investmentData.risk_profile.score}/100</div>
+                                                        <div className="risk-meta">
+                                                            Норма заощаджень: {investmentData.risk_profile.savings_rate}%
+                                                        </div>
+                                                        <div className={`risk-emergency ${investmentData.risk_profile.emergency_fund_covered ? 'covered' : 'not-covered'}`}>
+                                                            {investmentData.risk_profile.emergency_fund_covered ? '✅ Резервний фонд сформовано' : '⚠️ Резервний фонд не сформовано'}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {investmentData.portfolio?.allocations?.length > 0 && (
+                                                    <div className="portfolio-allocations">
+                                                        <div className="portfolio-title">Розподіл коштів</div>
+                                                        {investmentData.portfolio.allocations.map((a, i) => (
+                                                            <div key={i} className="allocation-row">
+                                                                <span className="allocation-name">{a.name}</span>
+                                                                <span className="allocation-amount">{a.amount?.toLocaleString('uk-UA')} ₴</span>
+                                                                {a.percent && <span className="allocation-pct">{a.percent}%</span>}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {/* Права колонка — текст Gemini */}
+                                            {investmentData.advice && (
+                                                <div className="investment-advice">
+                                                    <div className="ai-agent-text">{investmentData.advice}</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : null}
+                                </div>
 
                                 {/* Графік витрат */}
                                 <div className="analytics-card analytics-card--full analytics-card--bank" style={{ marginBottom: '35px' }}>

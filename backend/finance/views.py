@@ -900,15 +900,36 @@ class AIAnalystView(views.APIView):
 
     def post(self, request):
         question = request.data.get('question', None)
+        connection_id_raw = request.data.get('connection_id', '') or request.query_params.get('connection_id', '')
+        connection_id = int(connection_id_raw) if str(connection_id_raw).strip().isdigit() else None
 
         try:
-            bank = BankConnection.objects.filter(
-                user=request.user, bank_name='monobank', status='active'
-            ).first()
-
             transactions = []
-            if bank:
-                transactions = _get_uah_transactions(bank.access_token, days=30)
+            try:
+                dt_to = datetime.now(pytz.utc)
+                dt_from = dt_to - timedelta(days=30)
+                client = MongoClient(settings.MONGODB_URI)
+                db_mongo = client[settings.MONGODB_DATABASE]
+                query = {
+                    'user_id': request.user.id,
+                    'currency': 'UAH',
+                    'type': {'$in': ['income', 'expense']},
+                    'transaction_date': {'$gte': dt_from, '$lte': dt_to}
+                }
+                if connection_id:
+                    query['connection_id'] = connection_id
+                for doc in db_mongo['transactions'].find(query).sort('transaction_date', -1):
+                    tx_date = doc.get('transaction_date', dt_to)
+                    transactions.append({
+                        'type': doc.get('type', ''),
+                        'amount': float(str(doc.get('amount', 0))),
+                        'description': doc.get('description', ''),
+                        'counterparty': doc.get('counterparty', ''),
+                        'transaction_date': tx_date.isoformat() if hasattr(tx_date, 'isoformat') else str(tx_date),
+                    })
+                client.close()
+            except Exception as db_err:
+                print(f"[AIAnalystView] DB error: {db_err}")
 
             result = FinancialAnalystAgent.analyze(transactions, question)
             return Response(result)
@@ -921,17 +942,23 @@ class AIInvestmentView(views.APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
+        connection_id_raw = request.query_params.get('connection_id', '')
+        connection_id = int(connection_id_raw) if str(connection_id_raw).strip().isdigit() else None
+
         try:
             # Баланс — з Monobank API (реальний поточний баланс рахунку)
             balance = 0.0
-            bank = BankConnection.objects.filter(
-                user=request.user, bank_name='monobank', status='active'
-            ).first()
-            if bank:
-                try:
+            try:
+                if connection_id:
+                    bank = BankConnection.objects.get(id=connection_id, user=request.user)
+                else:
+                    bank = BankConnection.objects.filter(
+                        user=request.user, bank_name='monobank', status='active'
+                    ).first()
+                if bank:
                     balance = _get_real_balance(bank.access_token)[0]
-                except Exception:
-                    pass
+            except Exception:
+                pass
 
             # Доходи/витрати — з БД (повна локальна картина, без rate-limit)
             income = 0.0
@@ -941,12 +968,15 @@ class AIInvestmentView(views.APIView):
                 dt_from = dt_to - timedelta(days=30)
                 client = MongoClient(settings.MONGODB_URI)
                 db_mongo = client[settings.MONGODB_DATABASE]
-                for doc in db_mongo['transactions'].find({
+                inv_query = {
                     'user_id': request.user.id,
                     'currency': 'UAH',
                     'type': {'$in': ['income', 'expense']},
                     'transaction_date': {'$gte': dt_from, '$lte': dt_to}
-                }):
+                }
+                if connection_id:
+                    inv_query['connection_id'] = connection_id
+                for doc in db_mongo['transactions'].find(inv_query):
                     amt = float(str(doc.get('amount', 0)))
                     if doc.get('type') == 'income':
                         income += amt
@@ -1098,6 +1128,9 @@ class AIAnomalyView(views.APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
+        connection_id_raw = request.query_params.get('connection_id', '')
+        connection_id = int(connection_id_raw) if str(connection_id_raw).strip().isdigit() else None
+
         try:
             # 90 днів з БД — більший вибір дає точнішу медіану і MAD-поріг
             transactions = []
@@ -1106,12 +1139,15 @@ class AIAnomalyView(views.APIView):
                 dt_from = dt_to - timedelta(days=90)
                 client = MongoClient(settings.MONGODB_URI)
                 db_mongo = client[settings.MONGODB_DATABASE]
-                for doc in db_mongo['transactions'].find({
+                anomaly_query = {
                     'user_id': request.user.id,
                     'currency': 'UAH',
                     'type': {'$in': ['income', 'expense']},
                     'transaction_date': {'$gte': dt_from, '$lte': dt_to}
-                }).sort('transaction_date', -1):
+                }
+                if connection_id:
+                    anomaly_query['connection_id'] = connection_id
+                for doc in db_mongo['transactions'].find(anomaly_query).sort('transaction_date', -1):
                     tx_date = doc.get('transaction_date', dt_to)
                     transactions.append({
                         'type': doc.get('type', ''),
