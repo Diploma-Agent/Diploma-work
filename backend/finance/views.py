@@ -150,13 +150,12 @@ class AddBankConnectionView(views.APIView):
         import datetime
         from dateutil.relativedelta import relativedelta
 
-        # Запускаємо фонову синхронізацію для минулих місяців (2 попередні місяці)
+        # Запускаємо фонову синхронізацію для минулих місяців (2 попередні місяці) та поточного місяця
         try:
             today = timezone.now().date()
             first_day_of_current = today.replace(day=1)
             # Мінус 2 місяці
             first_day_of_past = first_day_of_current - relativedelta(months=2)
-            last_day_of_past = first_day_of_current - datetime.timedelta(days=1)
             
             run_in_background(
                 sync_user_connection,
@@ -164,7 +163,7 @@ class AddBankConnectionView(views.APIView):
                 bank_name, 
                 bank_connection.id,
                 date_from=first_day_of_past.isoformat(),
-                date_to=last_day_of_past.isoformat()
+                date_to=today.isoformat()
             )
         except Exception as e:
             print(f"Celery start error: {e}")
