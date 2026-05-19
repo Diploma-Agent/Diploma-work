@@ -278,79 +278,42 @@ selectedBankId змінився
 
 > Цей розділ призначений для ілюстрацій інтерфейсу системи. Скріншоти додаються вручну після завершення розробки.
 
-### Як додати скріншот
-
-1. Зробіть скріншот потрібного екрану (Windows: `Win + Shift + S`, macOS: `Cmd + Shift + 4`)
-2. Збережіть файл у папку `docs/screenshots/` (створіть її якщо не існує):
-   ```
-   Diploma-work/
-   └── docs/
-       └── screenshots/
-           ├── analytics_ai_agents.png
-           ├── chat_function_calling.png
-           └── ...
-   ```
-3. Вставте посилання у цей файл у форматі:
-   ```markdown
-   ![Назва скріншоту](docs/screenshots/назва_файлу.png)
-   ```
-
 ---
 
-### 1. Сторінка Analytics — AI-агенти
-
-> *(вставте скріншот сторінки Analytics з усіма чотирма AI-блоками)*
-
-```
-![Analytics AI Agents](docs/screenshots/analytics_ai_agents.png)
-```
-
----
-
-### 2. Блок "AI Аналіз бюджету" (FinancialAnalystAgent)
+### 1. Блок "AI Аналіз бюджету" (FinancialAnalystAgent)
 
 > *(Health Score, категорії витрат, текст Gemini)*
 
-```
-![Financial Analyst](docs/screenshots/analyst_health_score.png)
-```
+<img src="/screenshots_havryliuk/budget-analys.png" width="500" />
 
 ---
 
-### 3. Блок "AI Аномалії" (AnomalyDetectorAgent)
+### 2. Блок "AI Аномалії" (AnomalyDetectorAgent)
 
 > *(список підозрілих транзакцій, коментар Gemini)*
 
-```
-![Anomaly Detector](docs/screenshots/anomaly_detector.png)
-```
+<img src="/screenshots_havryliuk/anomaly.png" width="500" />
 
 ---
 
-### 4. Блок "Прогноз на 30 днів" (ForecastAgent)
+### 3. Блок "Прогноз на 30 днів" (ForecastAgent)
 
 > *(прогноз доходів/витрат, метрики точності R², MAE)*
 
-```
-![Forecast Agent](docs/screenshots/forecast_regression.png)
-```
+<img src="/screenshots_havryliuk/prognos.png" width="500" />
 
 ---
 
-### 5. Блок "AI Інвестиційний Радник" (InvestmentAdvisorAgent)
+### 4. Блок "AI Інвестиційний Радник" (InvestmentAdvisorAgent)
 
 > *(профіль ризику, розподіл портфелю, поради Gemini)*
 
-```
-![Investment Advisor](docs/screenshots/investment_advisor.png)
-```
+<img src="/screenshots_havryliuk/invesment.png width="500" />
 
 ---
 
-### 6. AI-чат (ChatAgent + Function Calling)
+### 5. AI-чат (ChatAgent + Function Calling)
 
 > *(приклад розмови з Function Calling: запит курсу або аналізу фінансів)*
 
-```
-![Chat Agent](docs/screenshots/chat_function_calling.png)
-```
+<img src="/screenshots_havryliuk/AI-chat.png width="500" />
