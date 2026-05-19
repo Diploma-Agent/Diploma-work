@@ -227,14 +227,14 @@ export const financeService = {
 		return response.json();
 	},
 
-	async aiAnalyst(token, question = null) {
+	async aiAnalyst(token, question = null, connectionId = null) {
 		const response = await fetch(`${API_URL}/ai/analyst/`, {
 			method: 'POST',
 			headers: {
 				'Authorization': `Bearer ${token}`,
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify({ question }),
+			body: JSON.stringify({ question, connection_id: connectionId }),
 		});
 
 		if (!response.ok) throw new Error('Помилка AI аналітика');
@@ -252,8 +252,10 @@ export const financeService = {
 		return response.json();
 	},
 
-	async aiAnomaly(token) {
-		const response = await fetch(`${API_URL}/ai/anomaly/`, {
+	async aiAnomaly(token, connectionId = null) {
+		let url = `${API_URL}/ai/anomaly/`;
+		if (connectionId) url += `?connection_id=${connectionId}`;
+		const response = await fetch(url, {
 			headers: { 'Authorization': `Bearer ${token}` },
 		});
 
@@ -261,8 +263,10 @@ export const financeService = {
 		return response.json();
 	},
 
-	async aiInvestment(token) {
-		const response = await fetch(`${API_URL}/ai/investment/`, {
+	async aiInvestment(token, connectionId = null) {
+		let url = `${API_URL}/ai/investment/`;
+		if (connectionId) url += `?connection_id=${connectionId}`;
+		const response = await fetch(url, {
 			headers: { 'Authorization': `Bearer ${token}` },
 		});
 
