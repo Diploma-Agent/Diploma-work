@@ -26,11 +26,15 @@ credentials = service_account.Credentials.from_service_account_file(
 genai.configure(credentials=credentials)
 
 MODELS = [
-    'gemini-3-flash-preview',
-    'gemini-3.1-flash-lite-preview',
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite'
+    # Gemini 3 — найсвіжіші актуальні моделі (станом на 2026-05-18)
+    'gemini-3.5-flash',             # Stable — найкраща поточна модель
+    'gemini-3-flash-preview',       # Preview — Gemini 3 Flash
+    'gemini-3.1-flash-lite-preview',# Preview — легша версія 3.1
+    # Gemini 2.5 — стабільний резерв
+    'gemini-2.5-flash',             # Stable — перевірений fallback
+    'gemini-2.5-flash-lite',        # Stable — найбюджетніший варіант
+    # gemini-2.0-flash      — DEPRECATED (видалено)
+    # gemini-2.0-flash-lite — DEPRECATED (видалено)
 ]
 MODEL = MODELS[0]
 

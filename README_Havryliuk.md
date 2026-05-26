@@ -36,9 +36,11 @@ frontend (React)
 Базовий модуль `base.py` реалізує виклик Gemini з **Exponential Backoff** і автоматичним перемиканням між резервними моделями при перевищенні rate limit:
 
 ```
-gemini-3-flash-preview → gemini-3.1-flash-lite-preview →
-gemini-2.5-flash → gemini-2.0-flash → gemini-2.0-flash-lite
+gemini-3.5-flash (Stable) → gemini-3-flash-preview →
+gemini-3.1-flash-lite-preview → gemini-2.5-flash → gemini-2.5-flash-lite
 ```
+
+> `gemini-2.0-flash` та `gemini-2.0-flash-lite` видалено — **deprecated** згідно офіційної документації Google AI (2026-05-18).
 
 ---
 
