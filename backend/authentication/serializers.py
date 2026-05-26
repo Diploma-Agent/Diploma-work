@@ -53,31 +53,30 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, write_only=True)
 
     def validate(self, data):
-        from django.db.models import Q
         email = data.get('email')
         username = data.get('username')
         password = data.get('password')
 
-        login_identifier = email or username
+        login_identifier = (email or username or '').strip()
 
-        if login_identifier and password:
-            # Шукаємо користувача за email або username
-            try:
-                user = User.objects.get(
-                    Q(email=login_identifier) | Q(username=login_identifier))
-                # Перевіряємо пароль
-                user = authenticate(username=user.username, password=password)
-            except User.DoesNotExist:
-                user = None
-
-            if not user:
-                raise serializers.ValidationError('Невірний логін або пароль')
-
-            data['user'] = user
-        else:
+        if not login_identifier or not password:
             raise serializers.ValidationError(
                 'Email (або username) і пароль обов\'язкові')
 
+        # Два окремі filter().first() — уникаємо Q-запитів, які
+        # djongo (MongoDB ORM) іноді транслює некоректно
+        user_obj = User.objects.filter(email=login_identifier).first()
+        if not user_obj:
+            user_obj = User.objects.filter(username=login_identifier).first()
+
+        if not user_obj:
+            raise serializers.ValidationError('Невірний логін або пароль')
+
+        user = authenticate(username=user_obj.username, password=password)
+        if not user:
+            raise serializers.ValidationError('Невірний логін або пароль')
+
+        data['user'] = user
         return data
 
 

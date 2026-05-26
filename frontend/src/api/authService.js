@@ -38,8 +38,15 @@ export const authService = {
 		});
 
 		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.email || error.password || 'Невірний email або пароль');
+			const error = await response.json().catch(() => ({}));
+			// DRF повертає non_field_errors для помилок validate()
+			const msg =
+				(Array.isArray(error.non_field_errors) && error.non_field_errors[0]) ||
+				error.detail ||
+				error.email ||
+				error.password ||
+				'Невірний email або пароль';
+			throw new Error(msg);
 		}
 
 		const result = await response.json();
