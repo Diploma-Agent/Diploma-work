@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../api/authService';
+import { useTheme } from '../context/ThemeContext';
 import '../styles/navbarStyles.css';
 
 function Navbar() {
 	const navigate = useNavigate();
 	const [userName, setUserName] = useState('Користувач');
+	const { theme, toggleTheme } = useTheme();
 
 	useEffect(() => {
 		const fetchUserProfile = async () => {
@@ -65,6 +67,13 @@ function Navbar() {
 
 				<div className="navbar-user">
 					<span className="navbar-username">{userName}</span>
+					<button
+						onClick={toggleTheme}
+						className="navbar-theme-toggle"
+						title={theme === 'dark' ? 'Світла тема' : 'Темна тема'}
+					>
+						{theme === 'dark' ? '☀️' : '🌙'}
+					</button>
 					<button onClick={handleLogout} className="navbar-logout">
 						Вийти
 					</button>

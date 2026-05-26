@@ -9,6 +9,8 @@ import Transactions from './templates/Transactions';
 import CreateProfile from './templates/CreateProfile';
 import ChatComponent from './components/ChatComponent';
 import { FinanceProvider } from './context/FinanceProvider';
+import { ThemeProvider } from './context/ThemeContext';
+import './styles/themeLight.css';
 
 const AUTH_ROUTES = ['/login', '/register', '/create-profile'];
 
@@ -42,9 +44,11 @@ function AppContent() {
 function App() {
 	return (
 		<Router>
-			<FinanceProvider>
-				<AppContent />
-			</FinanceProvider>
+			<ThemeProvider>
+				<FinanceProvider>
+					<AppContent />
+				</FinanceProvider>
+			</ThemeProvider>
 		</Router>
 	);
 }

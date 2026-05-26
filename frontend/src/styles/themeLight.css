@@ -1,0 +1,650 @@
+/* ══════════════════════════════════════════════════════════════
+   LIGHT THEME — overrides applied when html[data-theme="light"]
+══════════════════════════════════════════════════════════════ */
+
+/* ── Global ─────────────────────────────────────────────────── */
+html[data-theme="light"] body {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+html[data-theme="light"] button {
+    background-color: #f8fafc;
+    color: #0f172a;
+}
+
+html[data-theme="light"] .spinner {
+    border-color: rgba(0, 0, 0, 0.1);
+    border-top-color: #667eea;
+}
+
+html[data-theme="light"] .spinner-sm {
+    border-color: rgba(0, 0, 0, 0.1);
+    border-top-color: #667eea;
+}
+
+/* ── Navbar ──────────────────────────────────────────────────── */
+html[data-theme="light"] .navbar {
+    background: rgba(255, 255, 255, 0.92);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.18);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .navbar-link {
+    color: #475569;
+}
+
+html[data-theme="light"] .navbar-link:hover {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .navbar-username {
+    color: #1e293b;
+}
+
+/* ── Dashboard ───────────────────────────────────────────────── */
+html[data-theme="light"] .dashboard-main-box {
+    background: #ffffff;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme="light"] .dashboard-subtitle {
+    color: #64748b;
+}
+
+html[data-theme="light"] .dash-chip {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #475569;
+}
+
+html[data-theme="light"] .dash-chip:hover {
+    color: #0f172a;
+    background: rgba(102, 126, 234, 0.08);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+html[data-theme="light"] .dash-chip--active {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.1));
+    border-color: #667eea;
+    color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.15);
+}
+
+html[data-theme="light"] .dashboard-total-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.07), rgba(118, 75, 162, 0.07));
+    border-color: rgba(102, 126, 234, 0.2);
+}
+
+html[data-theme="light"] .dashboard-total-card h2 {
+    color: #64748b;
+}
+
+html[data-theme="light"] .balance-amount {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .stat-card {
+    background: rgba(241, 245, 249, 0.9);
+    border-color: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .stat-card:hover {
+    background: #f1f5f9;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme="light"] .stat-icon {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+html[data-theme="light"] .stat-label {
+    color: #64748b;
+}
+
+html[data-theme="light"] .stat-value {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .dashboard-widget {
+    background: rgba(248, 250, 252, 0.8);
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="light"] .widget-header h3 {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .no-data-text {
+    color: #94a3b8;
+}
+
+html[data-theme="light"] .tx-item {
+    background: #f8fafc;
+}
+
+html[data-theme="light"] .tx-item:hover {
+    background: #f1f5f9;
+}
+
+html[data-theme="light"] .tx-desc {
+    color: #1e293b;
+}
+
+html[data-theme="light"] .tx-date,
+html[data-theme="light"] .tx-counterparty {
+    color: #94a3b8;
+}
+
+html[data-theme="light"] .tx-amount-positive { color: #16a34a; }
+html[data-theme="light"] .tx-amount-negative { color: #dc2626; }
+
+/* ── Analytics ───────────────────────────────────────────────── */
+html[data-theme="light"] .analytics-container {
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme="light"] .analytics-title {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .analytics-card {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .analytics-card--bank {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .card-title {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .month-picker {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme="light"] .month-nav-btn {
+    color: #1e293b;
+}
+
+html[data-theme="light"] .month-nav-btn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .month-label {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .bank-account-chips .account-chip {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #475569;
+}
+
+html[data-theme="light"] .bank-account-chips .account-chip--active {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+    color: #667eea;
+}
+
+html[data-theme="light"] .balance-card,
+html[data-theme="light"] .orders-card {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .total-equity .label {
+    color: #64748b;
+}
+
+html[data-theme="light"] .total-equity .value {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+html[data-theme="light"] .coin-item {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="light"] .coin-name { color: #1e293b; }
+html[data-theme="light"] .coin-value { color: #0f172a; }
+html[data-theme="light"] .coin-usd { color: #64748b; }
+
+html[data-theme="light"] .no-data {
+    color: #94a3b8;
+}
+
+html[data-theme="light"] .exchange-selector label {
+    color: #475569;
+}
+
+html[data-theme="light"] .exchange-select-input {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #0f172a;
+}
+
+html[data-theme="light"] .tab-button {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #475569;
+}
+
+html[data-theme="light"] .tab-button.active {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+    color: #667eea;
+}
+
+html[data-theme="light"] .order-item {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="light"] .order-symbol { color: #1e293b; }
+html[data-theme="light"] .detail-row span { color: #475569; }
+html[data-theme="light"] .detail-row span:last-child { color: #0f172a; }
+
+html[data-theme="light"] .donut-legend-name { color: #334155; }
+html[data-theme="light"] .donut-legend-pct  { color: #64748b; }
+
+/* Income / Expenses rows */
+html[data-theme="light"] .income-row .label,
+html[data-theme="light"] .expense-row .label,
+html[data-theme="light"] .savings-row .label { color: #64748b; }
+html[data-theme="light"] .savings-row .value  { color: #0f172a; }
+
+html[data-theme="light"] .balance-change .change-label { color: #64748b; }
+
+/* Forecast card */
+html[data-theme="light"] .ai-forecast-card {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .ai-forecast-title  { color: #0f172a; }
+html[data-theme="light"] .ai-text            { color: #334155; }
+html[data-theme="light"] .forecast-balance   { color: #0f172a; }
+html[data-theme="light"] .forecast-label     { color: #64748b; }
+html[data-theme="light"] .forecast-value.positive { color: #16a34a; }
+html[data-theme="light"] .forecast-value.negative { color: #dc2626; }
+html[data-theme="light"] .forecast-hint      { color: #94a3b8; }
+html[data-theme="light"] .forecast-info      { color: #0f172a; }
+
+html[data-theme="light"] .accuracy-title  { color: #475569; }
+html[data-theme="light"] .accuracy-label  { color: #64748b; }
+html[data-theme="light"] .accuracy-metric { color: #0f172a; }
+
+html[data-theme="light"] .accuracy-section {
+    border-top-color: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .forecast-low-data-hint {
+    background: rgba(251, 191, 36, 0.1);
+    border-color: rgba(251, 191, 36, 0.3);
+    color: #92400e;
+}
+
+html[data-theme="light"] .agent-badge {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+}
+
+html[data-theme="light"] .agg-badge {
+    background: rgba(0, 0, 0, 0.06);
+    color: #64748b;
+}
+
+/* AI Agent cards */
+html[data-theme="light"] .ai-agent-card {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.07);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+html[data-theme="light"] .ai-agent-title { color: #0f172a; }
+html[data-theme="light"] .ai-agent-text  { color: #334155; }
+
+/* Markdown */
+html[data-theme="light"] .md-p         { color: #475569; }
+html[data-theme="light"] .md-h1        { color: #0f172a; border-bottom-color: rgba(0,0,0,0.08); }
+html[data-theme="light"] .md-h2        { color: #1e293b; }
+html[data-theme="light"] .md-h3        { color: #334155; }
+html[data-theme="light"] .md-list li   { color: #475569; }
+html[data-theme="light"] .md-list strong,
+html[data-theme="light"] .md-p strong  { color: #1e293b; }
+html[data-theme="light"] .md-p em,
+html[data-theme="light"] .md-list em   { color: #667eea; }
+
+/* Health score */
+html[data-theme="light"] .health-score-num   { color: #0f172a; }
+html[data-theme="light"] .health-score-max   { color: #64748b; }
+html[data-theme="light"] .health-score-label { color: #0f172a; }
+html[data-theme="light"] .health-score-sub   { color: #64748b; }
+html[data-theme="light"] .health-score-info  { color: #0f172a; }
+
+html[data-theme="light"] .analyst-cat-name { color: #334155; }
+html[data-theme="light"] .analyst-cat-pct  { color: #64748b; }
+html[data-theme="light"] .analyst-cat-bar-wrap { background: rgba(0, 0, 0, 0.07); }
+
+/* Anomalies */
+html[data-theme="light"] .anomaly-desc { color: #334155; }
+
+/* Investment */
+html[data-theme="light"] .risk-score  { color: #475569; }
+html[data-theme="light"] .risk-meta   { color: #64748b; }
+html[data-theme="light"] .risk-label  { color: #64748b; font-size: 0.78rem; text-transform: uppercase; }
+html[data-theme="light"] .portfolio-title  { color: #475569; }
+html[data-theme="light"] .allocation-name  { color: #334155; }
+html[data-theme="light"] .allocation-amount { color: #0f172a; }
+html[data-theme="light"] .allocation-pct   { color: #64748b; }
+
+/* Empty / loading states in analytics */
+html[data-theme="light"] .analytics-loading { color: #0f172a; }
+html[data-theme="light"] .analytics-error {
+    background: rgba(239, 68, 68, 0.07);
+    border-color: rgba(239, 68, 68, 0.2);
+    color: #dc2626;
+}
+
+/* ── Transactions ─────────────────────────────────────────────── */
+html[data-theme="light"] .transactions-page {
+    background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+    color-scheme: light;
+}
+
+html[data-theme="light"] .transactions-overlay {
+    background:
+        radial-gradient(circle at 20% 30%, rgba(102, 126, 234, 0.06) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.04) 0%, transparent 50%);
+}
+
+html[data-theme="light"] .transactions-loading { color: #0f172a; }
+html[data-theme="light"] .transactions-title   { color: #0f172a; text-shadow: none; }
+
+html[data-theme="light"] .transactions-filters {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .transactions-filters:hover {
+    border-color: rgba(102, 126, 234, 0.2);
+    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.08);
+}
+
+html[data-theme="light"] .filter-label  { color: #475569; }
+
+html[data-theme="light"] .filter-select,
+html[data-theme="light"] .filter-input,
+html[data-theme="light"] .filter-date,
+html[data-theme="light"] select,
+html[data-theme="light"] input[type="date"],
+html[data-theme="light"] input[type="text"] {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #0f172a;
+}
+
+html[data-theme="light"] .account-chips .account-chip {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #475569;
+}
+
+html[data-theme="light"] .account-chips .account-chip:hover {
+    background: rgba(102, 126, 234, 0.07);
+    color: #334155;
+}
+
+html[data-theme="light"] .account-chips .account-chip--active {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+    color: #667eea;
+}
+
+html[data-theme="light"] .transactions-error {
+    background: rgba(239, 68, 68, 0.07);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #dc2626;
+}
+
+/* Transaction table/list rows */
+html[data-theme="light"] .transactions-table-card,
+html[data-theme="light"] .transactions-list-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="light"] .transactions-table th {
+    background: rgba(241, 245, 249, 0.9);
+    color: #475569;
+    border-bottom-color: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .transactions-table td {
+    color: #1e293b;
+    border-bottom-color: rgba(0, 0, 0, 0.04);
+}
+
+html[data-theme="light"] .transaction-row:hover td {
+    background: rgba(241, 245, 249, 0.6);
+}
+
+html[data-theme="light"] .transactions-summary {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="light"] .summary-label { color: #64748b; }
+html[data-theme="light"] .summary-value { color: #0f172a; }
+
+html[data-theme="light"] .transactions-pagination button {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #475569;
+}
+
+html[data-theme="light"] .transactions-pagination button:hover {
+    background: rgba(102, 126, 234, 0.08);
+    border-color: #667eea;
+    color: #667eea;
+}
+
+html[data-theme="light"] .transactions-pagination button.active {
+    background: #667eea;
+    color: #fff;
+}
+
+/* Category badges */
+html[data-theme="light"] .category-badge {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+}
+
+/* Add transaction modal */
+html[data-theme="light"] .modal-overlay {
+    background: rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="light"] .modal-card,
+html[data-theme="light"] .add-transaction-modal {
+    background: #ffffff;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    color: #0f172a;
+}
+
+html[data-theme="light"] .modal-card label,
+html[data-theme="light"] .add-transaction-modal label { color: #475569; }
+
+html[data-theme="light"] .modal-card input,
+html[data-theme="light"] .modal-card select,
+html[data-theme="light"] .add-transaction-modal input,
+html[data-theme="light"] .add-transaction-modal select {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #0f172a;
+}
+
+/* ── Profile ──────────────────────────────────────────────────── */
+html[data-theme="light"] .profile-card {
+    background: #ffffff;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+    color: #0f172a;
+}
+
+html[data-theme="light"] .profile-card h1,
+html[data-theme="light"] .profile-card h2,
+html[data-theme="light"] .profile-card h3 { color: #0f172a; }
+
+html[data-theme="light"] .profile-card label { color: #475569; }
+
+html[data-theme="light"] .profile-card input,
+html[data-theme="light"] .profile-card select,
+html[data-theme="light"] .profile-card textarea {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #0f172a;
+}
+
+html[data-theme="light"] .profile-card input::placeholder { color: #94a3b8; }
+
+html[data-theme="light"] .profile-tab-btn {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #475569;
+}
+
+html[data-theme="light"] .profile-tab-btn.active,
+html[data-theme="light"] .profile-tab-btn--active {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+    color: #667eea;
+}
+
+html[data-theme="light"] .connection-item,
+html[data-theme="light"] .bank-item,
+html[data-theme="light"] .exchange-item {
+    background: rgba(241, 245, 249, 0.8);
+    border-color: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .connection-name,
+html[data-theme="light"] .bank-name { color: #0f172a; }
+
+html[data-theme="light"] .connection-sub,
+html[data-theme="light"] .bank-sub { color: #64748b; }
+
+html[data-theme="light"] .profile-section-title { color: #0f172a; }
+html[data-theme="light"] .profile-section-sub   { color: #64748b; }
+
+html[data-theme="light"] .status-badge--active {
+    background: rgba(22, 163, 74, 0.1);
+    color: #16a34a;
+    border-color: rgba(22, 163, 74, 0.25);
+}
+
+html[data-theme="light"] .status-badge--inactive,
+html[data-theme="light"] .status-badge--error {
+    background: rgba(239, 68, 68, 0.08);
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+/* ── Auth pages ───────────────────────────────────────────────── */
+html[data-theme="light"] .auth-card {
+    background: #ffffff;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+    color: #0f172a;
+}
+
+html[data-theme="light"] .auth-card h1,
+html[data-theme="light"] .auth-card h2 { color: #0f172a; }
+
+html[data-theme="light"] .auth-card label     { color: #475569; }
+html[data-theme="light"] .auth-card .auth-sub { color: #64748b; }
+
+html[data-theme="light"] .auth-card input {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #0f172a;
+}
+
+html[data-theme="light"] .auth-card input::placeholder { color: #94a3b8; }
+
+html[data-theme="light"] .auth-card input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+    background: #ffffff;
+}
+
+html[data-theme="light"] .auth-error {
+    background: rgba(239, 68, 68, 0.07);
+    border-color: rgba(239, 68, 68, 0.2);
+    color: #dc2626;
+}
+
+html[data-theme="light"] .auth-link,
+html[data-theme="light"] .auth-card a { color: #667eea; }
+
+/* ── Chat widget ──────────────────────────────────────────────── */
+html[data-theme="light"] .chat-window {
+    background: #ffffff;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.14);
+}
+
+html[data-theme="light"] .chat-messages {
+    background: #f8fafc;
+    scrollbar-color: #c7d2fe #f1f5f9;
+}
+
+html[data-theme="light"] .message.bot {
+    background: #ffffff;
+    border-color: rgba(102, 99, 255, 0.1);
+    color: #1e293b;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="light"] .agent-label { color: #667eea; }
+
+html[data-theme="light"] .chat-input-area {
+    background: #ffffff;
+    border-top-color: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .chat-input {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #0f172a;
+}
+
+html[data-theme="light"] .chat-input::placeholder { color: #94a3b8; }
+
+html[data-theme="light"] .chat-empty-hint,
+html[data-theme="light"] .chat-empty { color: #94a3b8; }
+
+html[data-theme="light"] .chat-timestamp { color: #94a3b8; }
+
+html[data-theme="light"] .chat-footer-note { color: #94a3b8; }
+
+html[data-theme="light"] .clear-history-btn {
+    color: #94a3b8;
+    background: transparent;
+}
+
+html[data-theme="light"] .clear-history-btn:hover {
+    color: #64748b;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+/* Typing indicator */
+html[data-theme="light"] .typing-dot {
+    background: #667eea;
+}

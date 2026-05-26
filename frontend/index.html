@@ -11,6 +11,13 @@
     <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
     <meta name="description" content="BanFin — Управління фінансами та AI-аналітика" />
     <title>BanFin</title>
+    <!-- Prevent flash of wrong theme on load -->
+    <script>
+      (function() {
+        var t = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
