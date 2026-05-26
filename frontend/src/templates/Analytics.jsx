@@ -66,10 +66,10 @@ function renderMarkdown(text) {
         }
 
         // Маркований список (* або -)
-        if (/^[\*\-]\s+/.test(line)) {
+        if (/^[-*]\s+/.test(line)) {
             const items = [];
-            while (i < lines.length && /^[\*\-]\s+/.test(lines[i])) {
-                items.push(<li key={i}>{parseInline(lines[i].replace(/^[\*\-]\s+/, ''), `ul${i}`)}</li>);
+            while (i < lines.length && /^[-*]\s+/.test(lines[i])) {
+                items.push(<li key={i}>{parseInline(lines[i].replace(/^[-*]\s+/, ''), `ul${i}`)}</li>);
                 i++;
             }
             elements.push(<ul key={`ul${i}`} className="md-list">{items}</ul>);
