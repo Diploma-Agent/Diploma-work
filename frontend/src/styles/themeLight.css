@@ -871,3 +871,218 @@ html[data-theme="light"] .orders-list::-webkit-scrollbar-track {
 html[data-theme="light"] .orders-list::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.15);
 }
+
+/* ══════════════════════════════════════════════════════════════
+   TRANSACTIONS — transaction cards (dark grey rows → light)
+══════════════════════════════════════════════════════════════ */
+
+html[data-theme="light"] .transaction-card {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.07);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="light"] .transaction-card:hover {
+    border-color: rgba(59, 130, 246, 0.25);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09);
+}
+
+html[data-theme="light"] .transaction-description {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .transaction-meta {
+    color: #64748b;
+}
+
+html[data-theme="light"] .transaction-source,
+html[data-theme="light"] .transaction-counterparty,
+html[data-theme="light"] .transaction-date {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.07);
+    color: #475569;
+}
+
+html[data-theme="light"] .transaction-card:hover .transaction-source,
+html[data-theme="light"] .transaction-card:hover .transaction-counterparty,
+html[data-theme="light"] .transaction-card:hover .transaction-date {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* ── Transactions account chips (high-specificity override) ── */
+html[data-theme="light"] .account-chips .account-chip {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: #475569 !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="light"] .account-chips .account-chip:hover {
+    background: rgba(59, 130, 246, 0.07) !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+    color: #334155 !important;
+}
+
+html[data-theme="light"] .account-chips .account-chip--active {
+    background: rgba(59, 130, 246, 0.1) !important;
+    border-color: #3b82f6 !important;
+    color: #3b82f6 !important;
+    box-shadow: none !important;
+}
+
+/* ── Transactions filter inputs ── */
+html[data-theme="light"] .filter-input:hover,
+html[data-theme="light"] .filter-select:hover {
+    background: #f1f5f9 !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    transform: none !important;
+}
+
+html[data-theme="light"] .filter-input:focus,
+html[data-theme="light"] .filter-select:focus {
+    background: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+    transform: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROFILE — dark cards / info boxes → light
+══════════════════════════════════════════════════════════════ */
+
+/* Profile info cards (Телефон, Дата народження, Місцезнаходження boxes) */
+html[data-theme="light"] .profile-info-card {
+    background: #f1f5f9;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .profile-info-value {
+    color: #1e293b;
+}
+
+html[data-theme="light"] .profile-info-value.empty {
+    color: #94a3b8;
+}
+
+/* Profile name (h2 – should be caught by h2 rule, but add explicit for safety) */
+html[data-theme="light"] .profile-name {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .profile-email {
+    color: #64748b;
+}
+
+/* Label spans inside profile-card (dark theme sets color on span directly) */
+html[data-theme="light"] .profile-label > span,
+html[data-theme="light"] .profile-card label > span {
+    color: #475569;
+}
+
+/* Inputs with class-level dark background (override specificity) */
+html[data-theme="light"] .profile-input {
+    background: #f8fafc !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+    color: #0f172a !important;
+}
+
+html[data-theme="light"] .profile-input:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+    background: #ffffff !important;
+}
+
+html[data-theme="light"] .profile-input::placeholder {
+    color: #94a3b8 !important;
+}
+
+/* Bank / Exchange / Token item cards (very dark → light) */
+html[data-theme="light"] .item-card {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .item-card:hover {
+    border-color: rgba(0, 0, 0, 0.14);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .item-name {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .item-detail {
+    color: #64748b;
+}
+
+html[data-theme="light"] .item-date {
+    color: #94a3b8;
+}
+
+/* Masked API key value */
+html[data-theme="light"] .token-value {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+/* Borders inside profile card */
+html[data-theme="light"] .profile-tabs {
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .profile-section-divider {
+    border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .profile-info {
+    border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .profile-info-item {
+    color: #64748b;
+}
+
+html[data-theme="light"] .profile-subsection-title {
+    color: #334155;
+}
+
+/* Add-form (dark form card) */
+html[data-theme="light"] .add-form {
+    background: #f1f5f9;
+    border-color: rgba(0, 0, 0, 0.09);
+}
+
+html[data-theme="light"] .add-form .profile-label > span,
+html[data-theme="light"] .add-form label > span {
+    color: #475569;
+}
+
+/* Generate button */
+html[data-theme="light"] .generate-button {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+html[data-theme="light"] .generate-button:hover {
+    background: #cbd5e1;
+}
+
+/* Section title in banks/tokens tabs */
+html[data-theme="light"] .section-title {
+    color: #0f172a;
+}
+
+/* Profile tab buttons (override if tab-button dark rules apply) */
+html[data-theme="light"] .profile-tabs .tab-button {
+    color: #475569;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+}
+
+html[data-theme="light"] .profile-tabs .tab-button.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+    background: transparent;
+}
