@@ -8,7 +8,8 @@ html[data-theme="light"] body {
     color: #0f172a;
 }
 
-html[data-theme="light"] button {
+/* Restrict button override — only non-gradient, non-action buttons */
+html[data-theme="light"] button:not(.recommendation-btn--primary):not(.action-btn):not([class*="send"]):not([class*="submit"]) {
     background-color: #f8fafc;
     color: #0f172a;
 }
@@ -320,7 +321,7 @@ html[data-theme="light"] .md-list li   { color: #475569; }
 html[data-theme="light"] .md-list strong,
 html[data-theme="light"] .md-p strong  { color: #1e293b; }
 html[data-theme="light"] .md-p em,
-html[data-theme="light"] .md-list em   { color: #667eea; }
+html[data-theme="light"] .md-list em   { color: #334155; font-style: italic; }
 
 /* Health score */
 html[data-theme="light"] .health-score-num   { color: #0f172a; }
@@ -647,4 +648,226 @@ html[data-theme="light"] .clear-history-btn:hover {
 /* Typing indicator */
 html[data-theme="light"] .typing-dot {
     background: #667eea;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PAGE-LEVEL BACKGROUNDS (previously missing)
+══════════════════════════════════════════════════════════════ */
+
+html[data-theme="light"] .dashboard-wrapper {
+    background: linear-gradient(135deg, #dde3f0 0%, #e8edf6 50%, #dde3f0 100%);
+}
+
+html[data-theme="light"] .analytics-page {
+    background: linear-gradient(135deg, #dde3f0 0%, #f1f5f9 100%);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ANALYTICS — header & title
+══════════════════════════════════════════════════════════════ */
+
+html[data-theme="light"] .analytics-header {
+    border-bottom-color: rgba(0, 0, 0, 0.09);
+}
+
+html[data-theme="light"] .analytics-header--bank {
+    border-top-color: rgba(0, 0, 0, 0.09);
+}
+
+html[data-theme="light"] .analytics-title {
+    color: #0f172a;
+    text-shadow: none;
+}
+
+html[data-theme="light"] .analytics-loading {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .analytics-loading p {
+    color: #0f172a;
+}
+
+/* ── Account chips in analytics (override high-specificity dark rules) ── */
+html[data-theme="light"] .analytics-header .account-chip,
+html[data-theme="light"] .bank-account-chips .account-chip {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: #475569 !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="light"] .analytics-header .account-chip:hover,
+html[data-theme="light"] .bank-account-chips .account-chip:hover {
+    background: rgba(102, 126, 234, 0.07) !important;
+    border-color: rgba(102, 126, 234, 0.3) !important;
+    color: #334155 !important;
+}
+
+html[data-theme="light"] .analytics-header .account-chip--active,
+html[data-theme="light"] .bank-account-chips .account-chip--active {
+    background: rgba(102, 126, 234, 0.1) !important;
+    border-color: #667eea !important;
+    color: #667eea !important;
+    box-shadow: 0 0 8px rgba(102, 126, 234, 0.15) !important;
+}
+
+/* ── Analytics card inner elements ── */
+html[data-theme="light"] .analytics-card h3 {
+    color: #0f172a;
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .analytics-card:hover {
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .analytics-card--recommendation {
+    background: #f8fafc;
+    border-color: rgba(102, 126, 234, 0.15);
+}
+
+html[data-theme="light"] .exchange-selector {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .orders-header-tabs {
+    border-bottom-color: rgba(0, 0, 0, 0.09);
+}
+
+html[data-theme="light"] .tab-button:hover {
+    color: #0f172a;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+html[data-theme="light"] .order-header {
+    border-bottom-color: rgba(0, 0, 0, 0.07);
+}
+
+/* ── Income / Expense / Savings rows ── */
+html[data-theme="light"] .income-row,
+html[data-theme="light"] .expense-row,
+html[data-theme="light"] .savings-row {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme="light"] .income-row .label,
+html[data-theme="light"] .expense-row .label,
+html[data-theme="light"] .savings-row .label {
+    color: #475569;
+}
+
+/* ── Category items ── */
+html[data-theme="light"] .category-item {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme="light"] .category-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+html[data-theme="light"] .category-name {
+    color: #1e293b;
+}
+
+/* ── Recommendations ── */
+html[data-theme="light"] .recommendation-item {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme="light"] .recommendation-label {
+    color: #334155;
+}
+
+html[data-theme="light"] .recommendation-btn--primary {
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    color: #fff !important;
+}
+
+html[data-theme="light"] .recommendation-btn--secondary {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #1e293b;
+}
+
+html[data-theme="light"] .recommendation-btn--secondary:hover {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* ── Empty state ── */
+html[data-theme="light"] .empty-state h3 {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .empty-state p {
+    color: #64748b;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DASHBOARD — inner elements (dark backgrounds that leaked)
+══════════════════════════════════════════════════════════════ */
+
+/* Title — change from purple gradient to dark neutral gradient */
+html[data-theme="light"] .dashboard-title {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+html[data-theme="light"] .ai-insights {
+    background: rgba(248, 250, 252, 0.95);
+    border-color: rgba(0, 0, 0, 0.07);
+}
+
+html[data-theme="light"] .ai-insights h3,
+html[data-theme="light"] .quick-actions h3 {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .insight-box {
+    background: #f1f5f9;
+}
+
+html[data-theme="light"] .insight-box p {
+    color: #334155;
+}
+
+html[data-theme="light"] .action-btn {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #1e293b;
+}
+
+html[data-theme="light"] .action-btn:hover {
+    background: rgba(102, 126, 234, 0.07);
+    border-color: rgba(102, 126, 234, 0.2);
+    color: #334155;
+}
+
+html[data-theme="light"] .loading-inline {
+    color: #64748b;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROFILE — elements that were still dark
+══════════════════════════════════════════════════════════════ */
+
+html[data-theme="light"] .profile-card textarea {
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #0f172a;
+}
+
+html[data-theme="light"] .profile-card textarea::placeholder { color: #94a3b8; }
+
+/* ── Scrollbars (light theme) ── */
+html[data-theme="light"] .orders-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+html[data-theme="light"] .orders-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
 }
