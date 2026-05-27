@@ -15,16 +15,29 @@ from finance.services.okx import OKXService
 User = get_user_model()
 
 
-# ── Погодинне авто-оновлення Monobank (останні 2 дні) ──────────────────────
+# ── Погодинне авто-оновлення Monobank (від дати останньої транзакції) ──────
 @shared_task(name='finance.tasks.sync_all_monobank')
 def sync_all_monobank():
     """Авто-синхронізація всіх активних Monobank (запускається щогодини)"""
+    from finance.models import Transaction
+    
     connections = BankConnection.objects.filter(bank_name='monobank', status='active')
     synced, failed = 0, 0
     for connection in connections:
         try:
+            latest_tx = Transaction.objects.filter(
+                connection_id=connection.id, 
+                source='monobank'
+            ).order_by('-transaction_date').first()
+            
             service = MonobankService(connection.user)
-            service.sync_transactions(connection, days=2)
+            if latest_tx:
+                date_from = latest_tx.transaction_date.date()
+                date_to = timezone.now().date()
+                service.sync_transactions(connection, date_from=date_from, date_to=date_to)
+            else:
+                service.sync_transactions(connection, days=2)
+                
             synced += 1
         except Exception as e:
             failed += 1
@@ -32,14 +45,29 @@ def sync_all_monobank():
     return {'synced': synced, 'failed': failed, 'total': connections.count()}
 
 
-# ── Погодинне авто-оновлення бірж (останні 2 дні) ──────────────────────────
+# ── Погодинне авто-оновлення бірж (від дати останньої транзакції) ──────────
 @shared_task(name='finance.tasks.sync_all_exchanges')
 def sync_all_exchanges():
     """Авто-синхронізація всіх активних бірж (запускається щогодини)"""
+    from finance.models import Transaction
+    
     exchanges = CryptoExchange.objects.filter(status='active')
     synced, failed = 0, 0
     for exchange in exchanges:
         try:
+            latest_tx = Transaction.objects.filter(
+                connection_id=exchange.id, 
+                source=exchange.exchange_name
+            ).order_by('-transaction_date').first()
+            
+            if latest_tx:
+                delta_days = (timezone.now() - latest_tx.transaction_date).days
+                # Встановлюємо мінімум 2 дні (для pending транзакцій), 
+                # і максимум 30 днів (щоб не перевантажити API при довгому простої)
+                days_to_sync = max(2, min(delta_days + 1, 30))
+            else:
+                days_to_sync = 2
+                
             if exchange.exchange_name == 'binance':
                 service = BinanceService(exchange.api_key, exchange.api_secret)
             elif exchange.exchange_name == 'bybit':
@@ -48,7 +76,8 @@ def sync_all_exchanges():
                 service = OKXService(exchange.api_key, exchange.api_secret, exchange.api_passphrase)
             else:
                 continue
-            service.sync_transactions(exchange, days=2)
+                
+            service.sync_transactions(exchange, days=days_to_sync)
             synced += 1
         except Exception as e:
             failed += 1
